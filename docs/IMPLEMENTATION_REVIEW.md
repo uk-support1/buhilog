@@ -1,0 +1,92 @@
+# ぶひろぐ 実装レビュー（Phase 0 確定版）
+
+最終更新: 2026-10-21 / 状態: 承認済み（依頼者より開発全面委任）
+
+## 1. 確定した方針
+| # | 方針 |
+|---|---|
+| 1 | 仕様の曖昧点8項目は推奨案を採用（§4） |
+| 2 | 症状別メモをVer.1から実装 |
+| 3 | 未入力（null/未記録）と未実施（not_done）を厳格に区別 |
+| 4 | 症状・アプローチは原則アーカイブ方式。物理削除は提供しない（全消去のみ） |
+| 5 | 分析期間は直近7/14/28/56日に統一 |
+| 6 | データ不足時は分析せず必要記録数を案内。群間の件数差も表示 |
+| 7 | 服薬詳細管理はVer.2以降 |
+| 8 | 相談窓口の静的案内を設定画面等に追加（検出・判定はしない） |
+| 9 | GitHub PagesにデプロイするPWA（静的配信のみ） |
+| 10 | JSONバックアップ/復元はVer.1必須。定期バックアップを促す |
+| 11 | データは端末内のみ。外部サーバー/AIへ送信しない（CSPで機械的に担保） |
+| 12 | 日付は入力開始時に確定し、保存前に変更可能 |
+| 13 | パスコードはVer.1不要。端末共有の注意書きを掲載 |
+| 14 | ぶひお正式素材は後日提供。当面は仮画像（オリジナルSVGプレースホルダー） |
+
+運用: 依頼者から企画・設計・開発・仕様更新の全面委任を受けている。ただし健康データ消失リスク、外部送信、有料サービス、公開範囲変更は事前確認する。
+
+## 2. 技術構成
+- TypeScript + React + Vite、`vite-plugin-pwa`（Workbox）
+- 保存: IndexedDB（Dexie）。入力検証: Zod
+- 分析: `src/domain/` のフレームワーク非依存の純粋関数
+- グラフ: 自前の軽量SVG（欠損は線を結ばない、色以外でも区別、代替テキスト）
+- テスト: Vitest（domain/db は fake-indexeddb）、Testing Library、Playwright（可能な範囲）
+- デプロイ: GitHub Pages（GitHub Actions、`base` はリポジトリ名）。HashRouter相当の自前ルーティングでPagesの404問題を回避
+- 外部通信なし。CSP: `default-src 'self'; connect-src 'self'; img-src 'self' data:`
+
+ディレクトリ:
+```
+src/domain   型・日付・分析（純粋関数）
+src/db       Dexie・マイグレーション・バックアップ/復元・CSV
+src/features today / problems / approaches / history / review / settings
+src/ui       共通部品
+tests/       フィクスチャ（合成データのみ）
+docs/        仕様・レビュー・CHANGELOG・進捗
+```
+
+## 3. データモデル（Ver.1）
+- Problem: id, name, description?, order, archivedAt?, createdAt, updatedAt
+- Approach: id, name, notes?, linkedProblemIds[], archivedAt?, createdAt, updatedAt
+- DailyEntry: id, localDate(一意), problemRatings{id→0..10|null}, **problemNotes{id→string}**, approachStatuses{id→done|not_done|unknown}, sleepHours?, stressRating?, note?, createdAt, updatedAt
+- AppSettings: schemaVersion, onboardingCompleted, lastBackupAt?, backupReminderDays=14, characterId?, characterName?
+- 集計値は保存せず都度再計算。日付は端末ローカルのYYYY-MM-DD（`toISOString`禁止）。
+
+## 4. 曖昧点8項目の決定
+1. 症状別メモ → `problemNotes` を追加。
+2. 未操作のアプローチは `unknown`（集計除外）。レコードに無い場合も `unknown` とみなす。
+3. アプローチの「実施日」は DailyEntry から導出。Approach側に持たない。
+4. 物理削除なし、アーカイブのみ。アーカイブ済みも過去記録・分析に残る。
+5. 期間は直近7/14/28/56日に統一。
+6. データ量ルール（表示用の安全策。統計的有意性ではない）:
+   - どちらかの群が0日: 比較不可。必要記録数を案内
+   - どちらかが1〜4日: 件数と平均を「参考」として小さく表示、評価語なし
+   - 両群5日以上: 探索的な平均差を表示
+   - 標準偏差は n>=2 のときのみ
+   - 件数差: 大きい群が小さい群の3倍以上、またはどちらかが全体の20%未満のとき「件数に偏りがあります」と明示
+7. 服薬はVer.1に含めない。
+8. 当日比較のため方向性（矢印・色付け）を出さない。複数アプローチのランキングは出さない。
+
+## 5. 画面
+下部タブ3つ: 記録／ふりかえり／設定。
+S00 はじめに、S01 初期登録、S02 今日の記録（日付確定→保存前変更可）、S03 困りごと管理、S04 アプローチ管理、S05 履歴、S06 振り返り、S07 関連の比較、S08 設定/バックアップ/相談窓口/端末共有の注意。
+
+## 6. 懸念点と対策
+| リスク | 対策 |
+|---|---|
+| iOSでIndexedDBが消える | `navigator.storage.persist()`要求、ホーム画面追加の案内、最終バックアップ日表示と定期促し、JSON手動バックアップ（共有シート/ダウンロード） |
+| 復元による既存データ破壊 | スキーマ・参照整合性検証、プレビュー、上書き前に二重確認、復元前の自動スナップショット（ダウンロード案内） |
+| スキーマ移行の破損 | Dexie versioning、マイグレーションテスト |
+| 逆因果・交絡の誤解 | 注意書き常時表示、効果/原因/確率の語を使わない |
+| 深刻な自由記述 | 静的な相談窓口案内。自動判定・自動回答はしない |
+| CSV式インジェクション | `= + - @` 始まりのセルを無害化 |
+| XSS | メモはテキスト表示のみ、CSP |
+| Pagesのサブパス/SW更新 | `base`設定、更新通知の実装 |
+| 実機確認不可（クラウド環境） | WebKitエミュレーションで代替。実機確認は依頼者に依頼 |
+
+## 7. 実装順とテスト
+- Phase 1: 土台、日付、Dexie、CRUD、日次記録、永続化テスト
+- Phase 2: 分析（A01/A02）、グラフ、データ不足表示
+- Phase 3: JSON/CSV、バックアップ促し、安全文言、a11y、Pagesデプロイ
+- Phase 4: 実機運用、フィードバック反映
+各Phase完了時にテスト結果を `docs/PROGRESS.md` に記録、変更は `CHANGELOG.md` に記録。
+
+## 8. 未確定事項
+- ぶひお正式素材・ロゴ（仮画像で進行）
+- 公開URLの扱い（Pages公開範囲は依頼者確認事項）
