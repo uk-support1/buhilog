@@ -34,3 +34,8 @@ fieldset { border:1px solid var(--line); border-radius:10px; margin:8px 0; }
 .welcome { text-align:center; } .welcome ul { text-align:left; }
 main.card { max-width:640px; margin:16px auto; }
 a { color:var(--accent); }
+select { width:100%; min-height:44px; padding:8px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font:inherit; color:inherit; }
+.chart { margin:8px 0; } .chart svg { width:100%; height:auto; }
+.cmp { border-top:1px solid var(--line); padding-top:8px; margin-top:8px; } .cmp h3 { margin:0 0 4px; font-size:1rem; }
+.warn { background:rgba(200,150,40,.15); padding:6px 8px; border-radius:8px; }
+table { width:100%; font-size:.9rem; } th { text-align:left; font-weight:400; }

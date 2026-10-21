@@ -3,7 +3,9 @@ import { repo } from './db/repo';
 import { Today } from './features/Today';
 import { Manage } from './features/Manage';
 import { History } from './features/History';
+import { Review } from './features/Review';
 import { Settings } from './features/Settings';
+import { BackupReminder } from './features/BackupReminder';
 import { Welcome } from './features/Welcome';
 import { Buhio } from './ui/Buhio';
 
@@ -29,6 +31,7 @@ export function App() {
     <div className="app">
       <header><Buhio size={32} /><span>ぶひろぐ</span></header>
       <main>
+        {tab !== 'settings' && <BackupReminder repo={repo} onGo={() => setTab('settings')} />}
         {tab === 'record' && (
           <>
             <nav className="subnav" aria-label="記録メニュー">
@@ -41,8 +44,8 @@ export function App() {
             {sub === 'manage' && <Manage repo={repo} />}
           </>
         )}
-        {tab === 'review' && <section className="card"><h2>ふりかえり</h2><p>準備中です。</p></section>}
-        {tab === 'settings' && <Settings repo={repo} onWiped={() => { setOnboarded(false); setTab('record'); setSub('today'); }} />}
+        {tab === 'review' && <Review repo={repo} />}
+        {tab === 'settings' && <Settings repo={repo} onRestored={() => { setOnboarded(true); setKey((k) => k + 1); setTab('record'); setSub('today'); }} onWiped={() => { setOnboarded(false); setTab('record'); setSub('today'); }} />}
       </main>
       <nav className="tabs" aria-label="メインメニュー">
         {([['record', '記録'], ['review', 'ふりかえり'], ['settings', '設定']] as [Tab, string][]).map(([t, l]) => (

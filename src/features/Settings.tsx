@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { Repo } from '../db/repo';
+import { BackupPanel } from './BackupPanel';
 import { SharedDeviceNotice, SupportInfo } from '../ui/Support';
 
-export function Settings({ repo, onWiped }: { repo: Repo; onWiped: () => void }) {
+export function Settings({ repo, onWiped, onRestored }: { repo: Repo; onWiped: () => void; onRestored: () => void }) {
   const [persisted, setPersisted] = useState<boolean | null>(null);
   useEffect(() => {
     void (async () => {
@@ -23,6 +24,7 @@ export function Settings({ repo, onWiped }: { repo: Repo; onWiped: () => void })
     <div>
       <SupportInfo />
       <SharedDeviceNotice />
+      <BackupPanel repo={repo} onRestored={onRestored} />
       <section className="card">
         <h2>保存の状態</h2>
         <p>
@@ -30,7 +32,6 @@ export function Settings({ repo, onWiped }: { repo: Repo; onWiped: () => void })
           {persisted === false && 'ブラウザが保存を保証していません。ホーム画面に追加して使い、バックアップを取ってください。'}
           {persisted === null && '保存状態を確認できませんでした。バックアップを取ってください。'}
         </p>
-        <p className="muted">※ バックアップ機能（JSON）は次のバージョンで追加します。</p>
       </section>
       <section className="card">
         <h2>すべてのデータを削除</h2>

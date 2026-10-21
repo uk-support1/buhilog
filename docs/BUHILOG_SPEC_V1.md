@@ -1,5 +1,7 @@
 # ぶひろぐ（BuhiLog）統合開発仕様書 Ver.1
 
+> **注記（2026-10-21）**: 本書は初期構想の参考資料です。確定した方針・変更点は `docs/IMPLEMENTATION_REVIEW.md` と `CHANGELOG.md` を優先してください。
+
 > Claude Web（Artifacts）へスマートフォンから1ファイルで渡すための統合版。元の8つのMarkdown仕様書を省略せず収録。
 
 ## Claude Webへの依頼（このセクションを最優先してください）
