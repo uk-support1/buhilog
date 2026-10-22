@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { formatJa, isValidLocalDate, toLocalDate } from '../domain/date';
 import type { Approach, ApproachStatus, Problem } from '../domain/types';
+import { Buhio } from '../ui/Buhio';
 import { RatingInput } from '../ui/RatingInput';
 
 interface Form {
@@ -99,7 +100,9 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
         </p>
       </section>
 
-      {problems.length === 0 && <p className="card">先に「管理」から困りごとを登録してください。</p>}
+      {problems.length === 0 && (
+        <p className="card"><Buhio size={64} pose="think" /> 先に「管理」から困りごとを登録してください。</p>
+      )}
 
       {problems.map((p) => (
         <section className="card" key={p.id} aria-label={p.name}>
@@ -170,7 +173,12 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
       </section>
 
       {err && <p role="alert" className="err">{err}</p>}
-      {msg && <p role="status" className="ok">{msg}</p>}
+      {msg && (
+        <div role="status" className="ok saved">
+          <Buhio size={64} pose="cheer" />
+          <span>{msg}</span>
+        </div>
+      )}
       <button className="primary" onClick={save} disabled={problems.length === 0}>
         保存する{dirty ? '（未保存の変更あり）' : ''}
       </button>

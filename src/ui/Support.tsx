@@ -1,8 +1,10 @@
+import { Buhio } from './Buhio';
+
 /** 相談窓口の静的案内。入力内容の判定・自動応答は行わない。 */
 export function SupportInfo() {
   return (
     <section className="card" aria-labelledby="support-h">
-      <h2 id="support-h">つらいときの相談先</h2>
+      <h2 id="support-h"><Buhio size={44} pose="back" /> つらいときの相談先</h2>
       <p>
         ぶひろぐは診断や治療の判断をしません。つらさが強いとき、眠れない・食べられない状態が続くとき、
         自分を傷つけたい気持ちがあるときは、ひとりで抱えず、主治医や身近な人、下の窓口に相談してください。

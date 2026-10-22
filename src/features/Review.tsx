@@ -4,6 +4,7 @@ import { buildSeries, compareApproach, PERIODS, type Period } from '../domain/an
 import { toLocalDate } from '../domain/date';
 import { describeComparison } from '../domain/text';
 import type { Approach, DailyEntry, Problem } from '../domain/types';
+import { Buhio } from '../ui/Buhio';
 import { TrendChart } from '../ui/TrendChart';
 
 export function Review({ repo }: { repo: Repo }) {
@@ -33,7 +34,7 @@ export function Review({ repo }: { repo: Repo }) {
   );
 
   if (!loaded) return null;
-  if (problems.length === 0) return <section className="card"><h2>ふりかえり</h2><p>困りごとを登録して記録をはじめると、ここに推移が表示されます。</p></section>;
+  if (problems.length === 0) return <section className="card"><Buhio size={72} pose="rest" /><h2>ふりかえり</h2><p>困りごとを登録して記録をはじめると、ここに推移が表示されます。</p></section>;
 
   return (
     <div>

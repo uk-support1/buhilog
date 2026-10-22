@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Repo } from '../db/repo';
+import { Buhio, POSES } from '../ui/Buhio';
 import { BackupPanel } from './BackupPanel';
 import { InstallGuide, SharedDeviceNotice, SupportInfo } from '../ui/Support';
 
@@ -33,6 +34,15 @@ export function Settings({ repo, onWiped, onRestored }: { repo: Repo; onWiped: (
           {persisted === false && 'ブラウザが保存を保証していません。ホーム画面に追加して使い、バックアップを取ってください。'}
           {persisted === null && '保存状態を確認できませんでした。バックアップを取ってください。'}
         </p>
+      </section>
+      <section className="card">
+        <h2>ぶひお（仮デザイン）</h2>
+        <p className="muted small">正式なキャラクター素材が届くまでの、オリジナルの仮の絵です。</p>
+        <div className="gallery">
+          {POSES.map((p) => (
+            <figure key={p.pose}><Buhio size={72} pose={p.pose} /><figcaption>{p.label}</figcaption></figure>
+          ))}
+        </div>
       </section>
       <section className="card">
         <h2>すべてのデータを削除</h2>

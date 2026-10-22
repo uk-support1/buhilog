@@ -1,0 +1,24 @@
+// 見た目確認用: node tests/e2e/shots.mjs <出力ディレクトリ>（合成データのみ）
+import { chromium } from 'playwright-core';
+import { spawn } from 'node:child_process';
+const out = process.argv[2] ?? '.';
+const srv = spawn('npx', ['vite', 'preview', '--port', '4174', '--strictPort'], { stdio: 'ignore' });
+await new Promise((r) => setTimeout(r, 2500));
+const b = await chromium.launch({ executablePath: process.env.CHROMIUM, args: ['--no-sandbox'] });
+const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, colorScheme: 'dark' });
+const p = await ctx.newPage();
+await p.goto('http://localhost:4174/buhilog/');
+await p.screenshot({ path: `${out}/1-welcome.png` });
+await p.getByRole('button', { name: 'はじめる' }).click();
+await p.getByRole('button', { name: '＋睡眠' }).click();
+await p.getByRole('button', { name: '記録をはじめる' }).click();
+await p.getByRole('radiogroup', { name: '睡眠の強さ' }).getByRole('radio', { name: '4', exact: true }).click();
+await p.screenshot({ path: `${out}/2-today.png` });
+await p.getByRole('button', { name: /保存する/ }).click();
+await p.getByText('保存しました').waitFor();
+await p.evaluate(() => window.scrollTo(0, 99999));
+await p.screenshot({ path: `${out}/3-saved.png` });
+await p.getByRole('button', { name: '設定' }).click();
+await p.getByText('ぶひお（仮デザイン）').scrollIntoViewIfNeeded();
+await p.screenshot({ path: `${out}/4-gallery.png` });
+await b.close(); srv.kill();
