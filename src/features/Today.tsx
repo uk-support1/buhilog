@@ -101,7 +101,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
       </section>
 
       {problems.length === 0 && (
-        <p className="card"><Buhio size={64} pose="think" /> 先に「管理」から困りごとを登録してください。</p>
+        <p className="card"><Buhio size={64} pose="pointing" /> 先に「管理」から困りごとを登録してください。</p>
       )}
 
       {problems.map((p) => (
@@ -175,7 +175,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
       {err && <p role="alert" className="err">{err}</p>}
       {msg && (
         <div role="status" className="ok saved">
-          <Buhio size={64} pose="cheer" />
+          <Buhio size={64} pose="jumping" />
           <span>{msg}</span>
         </div>
       )}

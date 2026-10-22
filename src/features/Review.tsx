@@ -34,7 +34,7 @@ export function Review({ repo }: { repo: Repo }) {
   );
 
   if (!loaded) return null;
-  if (problems.length === 0) return <section className="card"><Buhio size={72} pose="rest" /><h2>ふりかえり</h2><p>困りごとを登録して記録をはじめると、ここに推移が表示されます。</p></section>;
+  if (problems.length === 0) return <section className="card"><Buhio size={80} pose="standing" /><h2>ふりかえり</h2><p>困りごとを登録して記録をはじめると、ここに推移が表示されます。</p></section>;
 
   return (
     <div>
@@ -87,7 +87,12 @@ export function Review({ repo }: { repo: Repo }) {
                 {(c.excludedUnknown > 0 || c.excludedNoRating > 0) && (
                   <p className="muted small">除外: 実施状況が未回答の日 {c.excludedUnknown}日、症状の評価がない日 {c.excludedNoRating}日。</p>
                 )}
-                {t.caution.length > 0 && <ul className="muted small">{t.caution.map((x) => <li key={x}>{x}</li>)}</ul>}
+                {t.caution.length > 0 && (
+                  <div className="caution">
+                    <Buhio size={64} pose="important" />
+                    <ul className="muted small">{t.caution.map((x) => <li key={x}>{x}</li>)}</ul>
+                  </div>
+                )}
               </article>
             );
           })}

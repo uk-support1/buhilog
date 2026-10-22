@@ -19,6 +19,6 @@ await p.getByText('保存しました').waitFor();
 await p.evaluate(() => window.scrollTo(0, 99999));
 await p.screenshot({ path: `${out}/3-saved.png` });
 await p.getByRole('button', { name: '設定' }).click();
-await p.getByText('ぶひお（仮デザイン）').scrollIntoViewIfNeeded();
+await p.getByRole('heading', { name: 'ぶひお', exact: true }).scrollIntoViewIfNeeded();
 await p.screenshot({ path: `${out}/4-gallery.png` });
 await b.close(); srv.kill();

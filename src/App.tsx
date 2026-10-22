@@ -30,7 +30,7 @@ export function App() {
 
   return (
     <div className="app">
-      <header><Buhio size={44} pose="smile" /><span>ぶひろぐ</span></header>
+      <header><Buhio size={44} pose="standing" /><span>ぶひろぐ</span></header>
       <main>
         <UpdateBanner />
         {tab !== 'settings' && <BackupReminder repo={repo} onGo={() => setTab('settings')} />}
