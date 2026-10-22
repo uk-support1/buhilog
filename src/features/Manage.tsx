@@ -27,6 +27,15 @@ export function Manage({ repo }: { repo: Repo }) {
   const nameOf = (id: string) => problems.find((p) => p.id === id)?.name ?? '（不明）';
 
   const rename = (cur: string) => prompt('新しい名前', cur)?.trim();
+  // 「グループ／小見出し」の形式で入力（小見出しは省略可）。空にするとグループなし
+  const askGroup = (x: { group?: string; section?: string }) => {
+    const cur = [x.group, x.section].filter(Boolean).join('／');
+    const v = prompt('グループ名（小見出しがあれば「グループ／小見出し」）。空欄でグループなし', cur);
+    if (v === null) return null;
+    const [g, s] = v.split(/[／/]/).map((t) => t.trim());
+    return { group: g || undefined, section: g ? s || undefined : undefined };
+  };
+  const groupLabel = (x: { group?: string; section?: string }) => [x.group, x.section].filter(Boolean).join('／');
 
   return (
     <div>
@@ -36,9 +45,10 @@ export function Manage({ repo }: { repo: Repo }) {
         <ul className="plain">
           {activeP.map((p, i) => (
             <li key={p.id} className="row">
-              <span className="grow">{p.name}</span>
+              <span className="grow">{p.name}{groupLabel(p) && <small className="muted"> [{groupLabel(p)}]</small>}</span>
               <button aria-label={`${p.name}を上へ`} disabled={i === 0} onClick={() => run(() => repo.moveProblem(p.id, -1))}>↑</button>
               <button aria-label={`${p.name}を下へ`} disabled={i === activeP.length - 1} onClick={() => run(() => repo.moveProblem(p.id, 1))}>↓</button>
+              <button onClick={() => { const g = askGroup(p); if (g) void run(() => repo.updateProblem(p.id, g)); }}>グループ</button>
               <button onClick={() => { const n = rename(p.name); if (n) void run(() => repo.updateProblem(p.id, { name: n })); }}>名前変更</button>
               <button onClick={() => run(() => repo.setProblemArchived(p.id, true))}>アーカイブ</button>
             </li>
@@ -67,11 +77,12 @@ export function Manage({ repo }: { repo: Repo }) {
           {activeA.map((a) => (
             <li key={a.id} className="row wrap">
               <span className="grow">
-                {a.name}
+                {a.name}{groupLabel(a) && <small className="muted"> [{groupLabel(a)}]</small>}
                 <small className={a.linkedProblemIds.length ? 'muted' : 'warn-text'}>
                   {' '}{a.linkedProblemIds.length ? a.linkedProblemIds.map(nameOf).join('、') : '（対象の困りごとが未設定）'}
                 </small>
               </span>
+              <button onClick={() => { const g = askGroup(a); if (g) void run(() => repo.updateApproach(a.id, g)); }}>グループ</button>
               <button onClick={() => setLinkEditId(linkEditId === a.id ? null : a.id)}>対象を変更</button>
               <button onClick={() => { const n = rename(a.name); if (n) void run(() => repo.updateApproach(a.id, { name: n })); }}>名前変更</button>
               <button onClick={() => run(() => repo.setApproachArchived(a.id, true))}>アーカイブ</button>

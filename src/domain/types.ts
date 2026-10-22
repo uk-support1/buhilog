@@ -13,6 +13,9 @@ export const ProblemSchema = z.object({
   id,
   name: z.string().trim().min(1).max(MAX_NAME),
   description: z.string().max(MAX_TEXT).optional(),
+  /** 大きな括り（例: 睡眠・運動・困りごと）と、その中の小見出し */
+  group: z.string().trim().max(MAX_NAME).optional(),
+  section: z.string().trim().max(MAX_NAME).optional(),
   order: z.number().int(),
   archivedAt: ts.optional(),
   createdAt: ts,
@@ -24,6 +27,8 @@ export const ApproachSchema = z.object({
   id,
   name: z.string().trim().min(1).max(MAX_NAME),
   notes: z.string().max(MAX_TEXT).optional(),
+  group: z.string().trim().max(MAX_NAME).optional(),
+  section: z.string().trim().max(MAX_NAME).optional(),
   linkedProblemIds: z.array(id),
   archivedAt: ts.optional(),
   createdAt: ts,
@@ -54,6 +59,8 @@ export const AppSettingsSchema = z.object({
   onboardingCompleted: z.boolean(),
   lastBackupAt: ts.optional(),
   backupReminderDays: z.number().int().min(1).max(365),
+  /** 画面のグループ（タブ）の並び順 */
+  groupOrder: z.array(z.string().max(MAX_NAME)).optional(),
   characterId: z.string().optional(),
   characterName: z.string().max(MAX_NAME).optional(),
 });

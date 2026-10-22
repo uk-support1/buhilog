@@ -13,17 +13,17 @@ export function createRepo(d: BuhiLogDB = db) {
       const all = await d.problems.orderBy('order').toArray();
       return includeArchived ? all : all.filter((p) => !p.archivedAt);
     },
-    async addProblem(name: string, description?: string): Promise<Problem> {
+    async addProblem(name: string, description?: string, group?: string, section?: string): Promise<Problem> {
       const now = Date.now();
       const all = await d.problems.toArray();
       const order = all.reduce((m, p) => Math.max(m, p.order), -1) + 1;
       const p = ProblemSchema.parse({
-        id: newId(), name, description: description || undefined, order, createdAt: now, updatedAt: now,
+        id: newId(), name, description: description || undefined, group: group || undefined, section: section || undefined, order, createdAt: now, updatedAt: now,
       });
       await d.problems.add(p);
       return p;
     },
-    async updateProblem(id: string, patch: Partial<Pick<Problem, 'name' | 'description' | 'order'>>) {
+    async updateProblem(id: string, patch: Partial<Pick<Problem, 'name' | 'description' | 'order' | 'group' | 'section'>>) {
       await d.transaction('rw', d.problems, async () => {
         const cur = await d.problems.get(id);
         if (!cur) throw new Error('困りごとが見つかりません');
@@ -57,15 +57,15 @@ export function createRepo(d: BuhiLogDB = db) {
       const all = (await d.approaches.toArray()).sort((a, b) => a.createdAt - b.createdAt);
       return includeArchived ? all : all.filter((a) => !a.archivedAt);
     },
-    async addApproach(name: string, linkedProblemIds: string[], notes?: string): Promise<Approach> {
+    async addApproach(name: string, linkedProblemIds: string[], notes?: string, group?: string, section?: string): Promise<Approach> {
       const now = Date.now();
       const a = ApproachSchema.parse({
-        id: newId(), name, notes: notes || undefined, linkedProblemIds, createdAt: now, updatedAt: now,
+        id: newId(), name, notes: notes || undefined, group: group || undefined, section: section || undefined, linkedProblemIds, createdAt: now, updatedAt: now,
       });
       await d.approaches.add(a);
       return a;
     },
-    async updateApproach(id: string, patch: Partial<Pick<Approach, 'name' | 'notes' | 'linkedProblemIds'>>) {
+    async updateApproach(id: string, patch: Partial<Pick<Approach, 'name' | 'notes' | 'linkedProblemIds' | 'group' | 'section'>>) {
       await d.transaction('rw', d.approaches, async () => {
         const cur = await d.approaches.get(id);
         if (!cur) throw new Error('アプローチが見つかりません');

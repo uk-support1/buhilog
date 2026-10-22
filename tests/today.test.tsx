@@ -58,3 +58,31 @@ describe('かんたん記録', () => {
     expect(e?.sleepHours).toBe(6);
   });
 });
+
+describe('グループ（タブ）表示', () => {
+  it('タブで切り替えられ、メモ入力中にフォーカスが外れない', async () => {
+    const repo = createRepo(new BuhiLogDB('ui4'));
+    const p1 = await repo.addProblem('頭痛', undefined, '困りごと', 'からだ');
+    await repo.addProblem('睡眠の質', undefined, '睡眠');
+    await repo.addApproach('朝ヨガ', [p1.id], undefined, '朝要因');
+    const user = userEvent.setup();
+    render(<Today repo={repo} initialDate="2026-05-05" />);
+    await screen.findByRole('tablist');
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['困りごと0/1', '睡眠0/1', '朝要因0/1', '睡眠・メモ']);
+    expect(screen.getByText('頭痛')).toBeInTheDocument();
+    expect(screen.queryByText('朝ヨガ')).toBeNull();
+    await user.click(screen.getByRole('tab', { name: /朝要因/ }));
+    await user.click(screen.getByRole('radio', { name: '実施した' }));
+    expect(screen.getByRole('tab', { name: /朝要因1\/1/ })).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: /困りごと/ }));
+    await user.click(screen.getByText('メモ'));
+    const memo = screen.getByLabelText('頭痛のメモ');
+    await user.type(memo, 'abc');
+    expect(memo).toHaveFocus();
+    expect(memo).toHaveValue('abc');
+    await user.click(screen.getByRole('button', { name: /保存する/ }));
+    await screen.findByText(/保存しました/);
+    const e = await repo.getEntry('2026-05-05');
+    expect(e?.problemNotes[p1.id]).toBe('abc');
+  });
+});

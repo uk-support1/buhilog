@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { formatJa, isValidLocalDate, toLocalDate } from '../domain/date';
+import { buildGroups, hasNamedGroups } from '../domain/groups';
 import type { Approach, ApproachStatus, Problem } from '../domain/types';
 import { Buhio } from '../ui/Buhio';
 import { RatingInput } from '../ui/RatingInput';
@@ -16,27 +17,31 @@ interface Form {
 const emptyForm = (): Form => ({ ratings: {}, notes: {}, statuses: {}, sleep: '', stress: null, note: '' });
 
 const STATUS_LABEL: Record<ApproachStatus, string> = { done: '実施した', not_done: '実施しなかった', unknown: '未回答' };
+const MEMO_TAB = '__memo__';
 
 export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string }) {
   // 日付は入力開始時（画面を開いた時点）に確定し、保存前に変更できる
   const [date, setDate] = useState(initialDate ?? toLocalDate());
   const [problems, setProblems] = useState<Problem[]>([]);
   const [approaches, setApproaches] = useState<Approach[]>([]);
+  const [groupOrder, setGroupOrder] = useState<string[]>([]);
   const [form, setForm] = useState<Form>(emptyForm());
   const [existing, setExisting] = useState(false);
   const [dirty, setDirty] = useState(false);
-  // かんたん記録: メモ・睡眠・ストレスは折りたたむ。すでに入力がある日は最初から開く
+  // かんたん記録（グループ未設定のとき）: メモ・睡眠・ストレスは折りたたむ。入力がある日は最初から開く
   const [detail, setDetail] = useState(false);
+  const [tab, setTab] = useState<string>('');
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
   useEffect(() => {
     let live = true;
     (async () => {
-      const [ps, as, e] = await Promise.all([repo.listProblems(), repo.listApproaches(), repo.getEntry(date)]);
+      const [ps, as, e, st] = await Promise.all([repo.listProblems(), repo.listApproaches(), repo.getEntry(date), repo.getSettings()]);
       if (!live) return;
       setProblems(ps);
       setApproaches(as);
+      setGroupOrder(st.groupOrder ?? []);
       setExisting(!!e);
       setForm(
         e
@@ -57,6 +62,10 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
     })();
     return () => { live = false; };
   }, [repo, date]);
+
+  const groups = useMemo(() => buildGroups(problems, approaches, groupOrder), [problems, approaches, groupOrder]);
+  const grouped = hasNamedGroups(groups);
+  const activeTab = grouped ? (tab === MEMO_TAB || groups.some((g) => g.name === tab) ? tab : groups[0].name) : '';
 
   const edit = (f: (x: Form) => Form) => { setForm(f); setDirty(true); setMsg(''); };
 
@@ -91,6 +100,77 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
     }
   };
 
+  // 描画のたびに別コンポーネントにならないよう、関数として呼び出す（入力中のフォーカスを保つため）
+  const problemBlock = (p: Problem, H: 'h2' | 'h3') => (
+    <div className="item" aria-label={p.name} key={p.id}>
+      <H>{p.name}</H>
+      {p.description && <p className="muted small">{p.description}</p>}
+      <RatingInput
+        label={`${p.name}の強さ`}
+        value={form.ratings[p.id]}
+        onChange={(v) => edit((f) => ({ ...f, ratings: { ...f.ratings, [p.id]: v } }))}
+      />
+      {(detail || grouped) && (
+        <details open={!!form.notes[p.id]}>
+          <summary className="small">メモ</summary>
+          <textarea
+            aria-label={`${p.name}のメモ`}
+            rows={2}
+            maxLength={2000}
+            value={form.notes[p.id] ?? ''}
+            onChange={(e) => edit((f) => ({ ...f, notes: { ...f.notes, [p.id]: e.target.value } }))}
+          />
+        </details>
+      )}
+    </div>
+  );
+
+  const approachBlock = (a: Approach) => (
+    <div role="radiogroup" aria-label={a.name} className="approach-row" key={a.id}>
+      <div className="name">{a.name}</div>
+      <div className="seg">
+        {(['done', 'not_done', 'unknown'] as ApproachStatus[]).map((s) => (
+          <button
+            key={s}
+            type="button"
+            role="radio"
+            aria-checked={(form.statuses[a.id] ?? 'unknown') === s}
+            className={(form.statuses[a.id] ?? 'unknown') === s ? 'sel' : ''}
+            onClick={() => edit((f) => ({ ...f, statuses: { ...f.statuses, [a.id]: s } }))}
+          >
+            {STATUS_LABEL[s]}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const bodySection = (
+    <section className="card">
+      <h2>睡眠とメモ（任意）</h2>
+      <label className="field">
+        睡眠時間（時間）
+        <input inputMode="decimal" placeholder="例: 6.5" value={form.sleep} onChange={(e) => edit((f) => ({ ...f, sleep: e.target.value }))} />
+      </label>
+      <div className="field">
+        ストレス（0〜10）
+        <RatingInput label="ストレス" value={form.stress} onChange={(v) => edit((f) => ({ ...f, stress: v }))} />
+      </div>
+      <label className="field">
+        自由メモ
+        <textarea rows={grouped ? 8 : 3} maxLength={2000} value={form.note} onChange={(e) => edit((f) => ({ ...f, note: e.target.value }))} />
+      </label>
+      {!grouped && <button type="button" onClick={() => setDetail(false)}>くわしい入力をたたむ</button>}
+    </section>
+  );
+
+  const progress = (g: (typeof groups)[number]) => {
+    const ps = g.sections.flatMap((s) => s.problems);
+    const as = g.sections.flatMap((s) => s.approaches);
+    const filled = ps.filter((p) => form.ratings[p.id] != null).length + as.filter((a) => (form.statuses[a.id] ?? 'unknown') !== 'unknown').length;
+    return `${filled}/${ps.length + as.length}`;
+  };
+
   return (
     <div>
       <section className="card">
@@ -107,82 +187,55 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
         <p className="card"><Buhio size={64} pose="pointing" /> 先に「管理」から困りごとを登録してください。</p>
       )}
 
-      {problems.map((p) => (
-        <section className="card" key={p.id} aria-label={p.name}>
-          <h2>{p.name}</h2>
-          <p className="muted small">0＝なし 〜 10＝最もつらい</p>
-          <RatingInput
-            label={`${p.name}の強さ`}
-            value={form.ratings[p.id]}
-            onChange={(v) => edit((f) => ({ ...f, ratings: { ...f.ratings, [p.id]: v } }))}
-          />
-          {detail && (
-            <label className="field">
-              メモ（任意）
-              <textarea
-                rows={2}
-                maxLength={2000}
-                value={form.notes[p.id] ?? ''}
-                onChange={(e) => edit((f) => ({ ...f, notes: { ...f.notes, [p.id]: e.target.value } }))}
-              />
-            </label>
-          )}
-        </section>
-      ))}
-
-      {approaches.length > 0 && (
-        <section className="card">
-          <h2>試したこと</h2>
-          <p className="muted small">「実施しなかった」と「未回答」は別のものとして扱います。</p>
-          {approaches.map((a) => (
-            <div key={a.id} role="radiogroup" aria-label={a.name} className="approach-row">
-              <div className="name">{a.name}</div>
-              <div className="seg">
-                {(['done', 'not_done', 'unknown'] as ApproachStatus[]).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    role="radio"
-                    aria-checked={(form.statuses[a.id] ?? 'unknown') === s}
-                    className={(form.statuses[a.id] ?? 'unknown') === s ? 'sel' : ''}
-                    onClick={() => edit((f) => ({ ...f, statuses: { ...f.statuses, [a.id]: s } }))}
-                  >
-                    {STATUS_LABEL[s]}
-                  </button>
-                ))}
-              </div>
-            </div>
+      {grouped ? (
+        <>
+          <div className="gtabs" role="tablist" aria-label="記録の種類">
+            {groups.map((g) => (
+              <button key={g.name} role="tab" aria-selected={activeTab === g.name} className={activeTab === g.name ? 'sel' : ''} onClick={() => setTab(g.name)}>
+                {g.name}<small>{progress(g)}</small>
+              </button>
+            ))}
+            <button role="tab" aria-selected={activeTab === MEMO_TAB} className={activeTab === MEMO_TAB ? 'sel' : ''} onClick={() => setTab(MEMO_TAB)}>
+              睡眠・メモ
+            </button>
+          </div>
+          {activeTab === MEMO_TAB
+            ? bodySection
+            : groups
+                .filter((g) => g.name === activeTab)
+                .map((g) =>
+                  g.sections.map((s) => (
+                    <section className="card" key={s.title ?? '_'} aria-label={s.title ?? g.name}>
+                      <h2>{s.title ?? g.name}</h2>
+                      {s.problems.length > 0 && <p className="muted small">0＝なし／良い 〜 10＝最もつらい</p>}
+                      {s.problems.map((p) => problemBlock(p, 'h3'))}
+                      {s.approaches.length > 0 && <p className="muted small">「実施しなかった」と「未回答」は別のものとして扱います。</p>}
+                      {s.approaches.map(approachBlock)}
+                    </section>
+                  )),
+                )}
+        </>
+      ) : (
+        <>
+          {problems.map((p) => (
+            <section className="card" key={p.id}>
+              {problemBlock(p, 'h2')}
+            </section>
           ))}
-        </section>
-      )}
-
-      {!detail && (
-        <button type="button" className="more" onClick={() => setDetail(true)}>
-          ＋ くわしく入力する（メモ・睡眠・ストレス）
-        </button>
-      )}
-      {detail && (
-      <section className="card">
-        <h2>からだと気持ち（任意）</h2>
-        <label className="field">
-          睡眠時間（時間）
-          <input
-            inputMode="decimal"
-            placeholder="例: 6.5"
-            value={form.sleep}
-            onChange={(e) => edit((f) => ({ ...f, sleep: e.target.value }))}
-          />
-        </label>
-        <div className="field">
-          ストレス（0〜10）
-          <RatingInput label="ストレス" value={form.stress} onChange={(v) => edit((f) => ({ ...f, stress: v }))} />
-        </div>
-        <label className="field">
-          自由メモ
-          <textarea rows={3} maxLength={2000} value={form.note} onChange={(e) => edit((f) => ({ ...f, note: e.target.value }))} />
-        </label>
-        <button type="button" onClick={() => setDetail(false)}>くわしい入力をたたむ</button>
-      </section>
+          {approaches.length > 0 && (
+            <section className="card">
+              <h2>試したこと</h2>
+              <p className="muted small">「実施しなかった」と「未回答」は別のものとして扱います。</p>
+              {approaches.map(approachBlock)}
+            </section>
+          )}
+          {!detail && (
+            <button type="button" className="more" onClick={() => setDetail(true)}>
+              ＋ くわしく入力する（メモ・睡眠・ストレス）
+            </button>
+          )}
+          {detail && bodySection}
+        </>
       )}
 
       {err && <p role="alert" className="err">{err}</p>}
