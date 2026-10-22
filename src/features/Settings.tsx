@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { Buhio, POSES } from '../ui/Buhio';
+import { VersionInfo } from '../ui/VersionInfo';
 import { BackupPanel } from './BackupPanel';
 import { InstallGuide, SharedDeviceNotice, SupportInfo } from '../ui/Support';
 
@@ -44,6 +45,7 @@ export function Settings({ repo, onWiped, onRestored }: { repo: Repo; onWiped: (
           ))}
         </div>
       </section>
+      <VersionInfo />
       <section className="card">
         <h2>すべてのデータを削除</h2>
         <button className="danger" onClick={wipe}>全データを削除する</button>
