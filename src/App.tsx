@@ -7,6 +7,7 @@ import { Review } from './features/Review';
 import { Settings } from './features/Settings';
 import { BackupReminder } from './features/BackupReminder';
 import { Welcome } from './features/Welcome';
+import { UpdateBanner } from './ui/UpdateBanner';
 import { Buhio } from './ui/Buhio';
 
 type Tab = 'record' | 'review' | 'settings';
@@ -31,6 +32,7 @@ export function App() {
     <div className="app">
       <header><Buhio size={32} /><span>ぶひろぐ</span></header>
       <main>
+        <UpdateBanner />
         {tab !== 'settings' && <BackupReminder repo={repo} onGo={() => setTab('settings')} />}
         {tab === 'record' && (
           <>

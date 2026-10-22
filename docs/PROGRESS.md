@@ -17,3 +17,7 @@
 ## 依頼者への確認事項
 1. **GitHub Pages公開**: 配信物はアプリのコードのみでデータは含まれません。ただし Pages のURLはリポジトリの種類・プランによって公開範囲が変わるため、公開してよいかご確認ください（`main` へマージし、Settings → Pages で Source を「GitHub Actions」にすると配信されます。現在の作業は `claude/buhilog-dev` ブランチで、まだ配信されていません）。
 2. ぶひお正式素材の提供（現在は仮SVG）。
+
+## 公開・修正 — 2026-10-22
+- リポジトリを公開にし、GitHub Pages で配信開始（https://uk-support1.github.io/buhilog/）。
+- 不具合修正: Service Worker の登録処理が未実装で、オフライン動作と更新案内が働いていなかった。`UpdateBanner` を追加し、E2Eでオフライン再読込を確認（31 unit + smoke e2e 成功）。
