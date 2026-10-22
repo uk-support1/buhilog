@@ -71,7 +71,10 @@ export async function restoreBackup(db: BuhiLogDB, b: Backup): Promise<void> {
     await db.problems.bulkAdd(b.problems as Problem[]);
     await db.approaches.bulkAdd(b.approaches as Approach[]);
     await db.dailyEntries.bulkAdd(b.dailyEntries as DailyEntry[]);
-    await db.settings.put({ ...(b.settings as AppSettings), onboardingCompleted: true, key: 'app' });
+    // 復元した内容は、そのバックアップ（作成日時）と同じ状態。最後のバックアップ日を失わせず、古くならないようにする
+    const exported = Date.parse(b.exportedAt);
+    const lastBackupAt = Math.max(b.settings.lastBackupAt ?? 0, Number.isNaN(exported) ? 0 : exported) || undefined;
+    await db.settings.put({ ...(b.settings as AppSettings), lastBackupAt, backupSnoozedUntil: undefined, onboardingCompleted: true, key: 'app' });
   });
 }
 
@@ -110,6 +113,7 @@ export function daysSince(ts: number | undefined, now = Date.now()): number | nu
 /** 記録があり、最終バックアップから設定日数を超えた（または未実施）ならtrue */
 export function backupDue(hasEntries: boolean, s: AppSettings, now = Date.now()): boolean {
   if (!hasEntries) return false;
+  if (s.backupSnoozedUntil != null && s.backupSnoozedUntil > now) return false;
   const d = daysSince(s.lastBackupAt, now);
   return d == null || d >= s.backupReminderDays;
 }

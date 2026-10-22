@@ -64,6 +64,8 @@ export const AppSettingsSchema = z.object({
   schemaVersion: z.number().int(),
   onboardingCompleted: z.boolean(),
   lastBackupAt: ts.optional(),
+  /** バックアップのお知らせを、この時刻まで出さない（「あとで」） */
+  backupSnoozedUntil: ts.optional(),
   backupReminderDays: z.number().int().min(1).max(365),
   /** 画面のグループ（タブ）の並び順 */
   groupOrder: z.array(z.string().max(MAX_NAME)).optional(),
