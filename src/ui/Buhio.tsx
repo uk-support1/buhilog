@@ -18,6 +18,8 @@ const SKIN = '#ffc4d2';
 const DARK = '#ff9db5';
 const INK = '#4a3340';
 const GOLD = '#ffcf4a';
+const SHIRT = '#8fd0f2';
+const SHIRT_DARK = '#5db6e6';
 
 const Star = ({ x, y, s = 1 }: { x: number; y: number; s?: number }) => (
   <path transform={`translate(${x} ${y}) scale(${s})`} d="M0 -7 L2 -2 L7 0 L2 2 L0 7 L-2 2 L-7 0 L-2 -2 Z" fill={GOLD} />
@@ -36,7 +38,7 @@ function Ears() {
 
 function Arms({ pose }: { pose: Pose }) {
   const arm = (cx: number, cy: number, rot: number) => (
-    <ellipse cx={cx} cy={cy} rx="6.5" ry="13" transform={`rotate(${rot} ${cx} ${cy})`} fill={SKIN} />
+    <ellipse cx={cx} cy={cy} rx="6.5" ry="13" transform={`rotate(${rot} ${cx} ${cy})`} fill={SHIRT} />
   );
   if (pose === 'cheer') return <g>{arm(29, 82, -38)}{arm(91, 82, 38)}</g>;
   if (pose === 'wave') return <g>{arm(32, 100, 14)}{arm(90, 80, 38)}</g>;
@@ -83,8 +85,9 @@ function Front({ pose }: { pose: Pose }) {
   return (
     <g>
       <Ears />
-      <ellipse cx="60" cy="101" rx="24" ry="18" fill={SKIN} />
-      <ellipse cx="60" cy="104" rx="14" ry="10" fill="#ffe3ea" />
+      <ellipse cx="60" cy="101" rx="24" ry="18" fill={SHIRT} />
+      <path d="M48 86 Q60 94 72 86" fill="none" stroke={SHIRT_DARK} strokeWidth="2.5" strokeLinecap="round" />
+      <text x="60" y="108" textAnchor="middle" fontSize="15" fontWeight="800" fill="#fff" stroke={SHIRT_DARK} strokeWidth=".6">39</text>
       <ellipse cx="47" cy="116" rx="9" ry="4" fill={DARK} /><ellipse cx="73" cy="116" rx="9" ry="4" fill={DARK} />
       <Arms pose={pose} />
       <ellipse cx="60" cy="58" rx="35" ry="31" fill={SKIN} />
@@ -111,11 +114,11 @@ function Back() {
   return (
     <g>
       <Ears />
-      <ellipse cx="60" cy="96" rx="29" ry="22" fill={SKIN} />
+      <ellipse cx="60" cy="96" rx="29" ry="22" fill={SHIRT} />
       <ellipse cx="60" cy="58" rx="35" ry="31" fill={SKIN} />
       <path d="M44 46 Q60 38 76 46" fill="none" stroke={DARK} strokeWidth="3" strokeLinecap="round" opacity=".7" />
-      <ellipse cx="29" cy="98" rx="6.5" ry="13" transform="rotate(12 29 98)" fill={SKIN} />
-      <ellipse cx="91" cy="98" rx="6.5" ry="13" transform="rotate(-12 91 98)" fill={SKIN} />
+      <ellipse cx="29" cy="98" rx="6.5" ry="13" transform="rotate(12 29 98)" fill={SHIRT} />
+      <ellipse cx="91" cy="98" rx="6.5" ry="13" transform="rotate(-12 91 98)" fill={SHIRT} />
       <path d="M86 104 Q104 100 98 88 Q93 80 86 88" fill="none" stroke={DARK} strokeWidth="4" strokeLinecap="round" />
       <ellipse cx="47" cy="116" rx="9" ry="4" fill={DARK} /><ellipse cx="73" cy="116" rx="9" ry="4" fill={DARK} />
     </g>
