@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BuhiLogDB } from '../src/db/db';
 import { createRepo } from '../src/db/repo';
@@ -68,14 +68,14 @@ describe('グループ（タブ）表示', () => {
     const user = userEvent.setup();
     render(<Today repo={repo} initialDate="2026-05-05" />);
     await screen.findByRole('tablist');
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['困りごと0/1', '睡眠0/1', '朝要因0/1', '睡眠・メモ']);
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['困りごと0/1', '睡眠0/1', '朝要因0/1', 'メモ']);
     expect(screen.getByText('頭痛')).toBeInTheDocument();
     expect(screen.queryByText('朝ヨガ')).toBeNull();
     await user.click(screen.getByRole('tab', { name: /朝要因/ }));
     await user.click(screen.getByRole('radio', { name: '実施した' }));
     expect(screen.getByRole('tab', { name: /朝要因1\/1/ })).toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: /困りごと/ }));
-    await user.click(screen.getByText('メモ'));
+    await user.click(screen.getAllByText('メモ').find((el) => el.tagName === 'SUMMARY')!);
     const memo = screen.getByLabelText('頭痛のメモ');
     await user.type(memo, 'abc');
     expect(memo).toHaveFocus();
@@ -84,5 +84,33 @@ describe('グループ（タブ）表示', () => {
     await screen.findByText(/保存しました/);
     const e = await repo.getEntry('2026-05-05');
     expect(e?.problemNotes[p1.id]).toBe('abc');
+  });
+});
+
+describe('睡眠の入力', () => {
+  it('就寝・起床・昼寝から合計を自動計算して保存し、中途覚醒は1〜6時間目の合計を表示する', async () => {
+    const repo = createRepo(new BuhiLogDB('ui5'));
+    await repo.addProblem('睡眠の質', undefined, '睡眠');
+    const user = userEvent.setup();
+    render(<Today repo={repo} initialDate="2026-05-06" />);
+    await screen.findByRole('tablist');
+    fireEvent.change(screen.getByLabelText('就寝時刻'), { target: { value: '22:30' } });
+    fireEvent.change(screen.getByLabelText('起床時刻'), { target: { value: '06:00' } });
+    await user.type(screen.getByLabelText(/昼寝/), '1');
+    expect(screen.getByText(/合計睡眠時間（自動）/).textContent).toMatch(/8\.5 時間/);
+    await user.selectOptions(screen.getByLabelText('3〜4時間目'), '1');
+    await user.selectOptions(screen.getByLabelText('5〜6時間目'), '2');
+    await user.selectOptions(screen.getByLabelText(/6〜7時間目/), '3');
+    expect(screen.getByText(/合計（1〜6時間目）/).textContent).toMatch(/3回/);
+    await user.click(screen.getByRole('button', { name: /保存する/ }));
+    await screen.findByText(/保存しました/);
+    const e = await repo.getEntry('2026-05-06');
+    expect(e).toMatchObject({ bedtime: '22:30', wakeTime: '06:00', napHours: 1, sleepHours: 8.5 });
+    expect(e?.awakenings).toEqual([null, null, 1, null, 2, 3]);
+  });
+  it('不正な時刻は保存で拒否される', async () => {
+    const repo = createRepo(new BuhiLogDB('ui6'));
+    await expect(repo.saveEntry({ localDate: '2026-05-07', problemRatings: {}, problemNotes: {}, approachStatuses: {}, bedtime: '25:00' })).rejects.toThrow();
+    await expect(repo.saveEntry({ localDate: '2026-05-07', problemRatings: {}, problemNotes: {}, approachStatuses: {}, awakenings: [1, 2] })).rejects.toThrow();
   });
 });

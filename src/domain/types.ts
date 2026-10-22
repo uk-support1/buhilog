@@ -46,7 +46,13 @@ export const DailyEntrySchema = z.object({
   problemRatings: z.record(z.string(), rating.nullable()),
   problemNotes: z.record(z.string(), z.string().max(MAX_TEXT)),
   approachStatuses: z.record(z.string(), ApproachStatusSchema),
+  /** 合計睡眠時間（夜＋昼寝）。就寝・起床があれば自動計算した値を保存 */
   sleepHours: z.number().min(0).max(24).optional(),
+  bedtime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+  wakeTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+  napHours: z.number().min(0).max(24).optional(),
+  /** 中途覚醒の回数。1〜2, 2〜3, …, 6〜7時間目の6区間。null=未入力 */
+  awakenings: z.array(z.number().int().min(0).max(30).nullable()).length(6).optional(),
   stressRating: rating.optional(),
   note: z.string().max(MAX_TEXT).optional(),
   createdAt: ts,
