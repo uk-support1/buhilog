@@ -32,6 +32,14 @@ await page.getByRole('button', { name: 'ふりかえり' }).click();
 await page.getByText('睡眠の推移').waitFor({ timeout: 5000 });
 await page.getByText('評価を記録したのは').waitFor();
 check(await page.locator('svg[role=img]').count() === 1, '再読み込み後もデータが残りグラフが出る');
+await page.evaluate(() => navigator.serviceWorker.ready);
+await page.reload(); // SW が制御下に入るまで一度読み直す
+await ctx.setOffline(true);
+await page.reload();
+await page.getByRole('button', { name: 'ふりかえり' }).click();
+await page.getByText('睡眠の推移').waitFor({ timeout: 5000 });
+check(true, 'オフラインでも開けて記録が読める');
+await ctx.setOffline(false);
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
 check(!overflow, '横スクロールなし(390px)');
 check(external.length === 0, `外部リクエストなし ${external.join(',')}`);
