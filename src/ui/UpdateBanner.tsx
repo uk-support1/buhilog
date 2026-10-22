@@ -6,7 +6,15 @@ export function UpdateBanner() {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
-  } = useRegisterSW();
+  } = useRegisterSW({
+    // アプリを開き直したとき・画面に戻ったときに、新しい版がないか確認する
+    onRegisteredSW(_url, registration) {
+      if (!registration) return;
+      const check = () => { if (document.visibilityState === 'visible') void registration.update().catch(() => undefined); };
+      document.addEventListener('visibilitychange', check);
+      check();
+    },
+  });
   if (!needRefresh && !offlineReady) return null;
   return (
     <div className="card warn" role="status">

@@ -4,7 +4,10 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // GitHub Pages のサブパス配信に対応（リポジトリ名）
+const build = `${(process.env.GITHUB_SHA ?? 'dev').slice(0, 7)} / ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+
 export default defineConfig({
+  define: { __BUILD__: JSON.stringify(build) },
   base: process.env.BASE_PATH ?? '/buhilog/',
   plugins: [
     react(),
@@ -25,7 +28,7 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,webp}'] },
+      workbox: { skipWaiting: true, clientsClaim: true, cleanupOutdatedCaches: true, globPatterns: ['**/*.{js,css,html,svg,png,webp}'] },
     }),
   ],
   test: { environment: 'jsdom', globals: true, setupFiles: ['tests/setup.ts'] },
