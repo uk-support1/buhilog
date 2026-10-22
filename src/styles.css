@@ -72,3 +72,16 @@ main.card { margin-top:calc(16px + env(safe-area-inset-top)); }
 .two { display:grid; grid-template-columns:1fr 1fr; gap:8px; } .awake-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px 8px; } .awake-grid .field { margin:4px 0; font-size:.8rem; }
 .total { background:var(--mint); border-radius:12px; padding:6px 10px; margin:8px 0; }
 input[type=time] { min-height:44px; }
+
+/* 管理画面: 名前を1段目に全幅で出し、ボタンはその下に折り返して並べる（名前が縦長に潰れないように） */
+.row.wrap > .grow, .manage > .grow { flex:1 1 100%; min-width:0; }
+.manage button { min-height:40px; min-width:40px; padding:4px 10px; font-size:.9rem; }
+/* 履歴: 1行〜2行にまとめる */
+.hrow { display:flex; gap:8px; align-items:center; padding:8px 0; border-bottom:2px dotted var(--line); }
+.hmain { flex:1; min-width:0; } .hchips { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+.hchip { font-size:.78rem; line-height:1.4; padding:1px 8px; border-radius:999px; background:var(--sun); white-space:nowrap; }
+.hchip.full { background:var(--mint); } .hchip.none { background:#f3eef0; color:var(--muted); } .hchip.memo { background:var(--sky); color:var(--sky-fg); }
+.hbtn { display:flex; flex-direction:column; gap:4px; } .hbtn button { min-height:36px; padding:2px 12px; font-size:.85rem; }
+
+.hrow.empty { padding:2px 0; } .hrow.empty .hmain { display:flex; gap:10px; align-items:baseline; } .hrow.empty strong { font-weight:600; font-size:.95rem; }
+.hrow.empty .hbtn button { min-height:34px; padding:0 12px; font-size:.8rem; }

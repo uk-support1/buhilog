@@ -44,7 +44,7 @@ export function Manage({ repo }: { repo: Repo }) {
         <h2>困りごと</h2>
         <ul className="plain">
           {activeP.map((p, i) => (
-            <li key={p.id} className="row">
+            <li key={p.id} className="row wrap manage">
               <span className="grow">{p.name}{groupLabel(p) && <small className="muted"> [{groupLabel(p)}]</small>}</span>
               <button aria-label={`${p.name}を上へ`} disabled={i === 0} onClick={() => run(() => repo.moveProblem(p.id, -1))}>↑</button>
               <button aria-label={`${p.name}を下へ`} disabled={i === activeP.length - 1} onClick={() => run(() => repo.moveProblem(p.id, 1))}>↓</button>
@@ -75,7 +75,7 @@ export function Manage({ repo }: { repo: Repo }) {
         <h2>試すこと（アプローチ）</h2>
         <ul className="plain">
           {activeA.map((a) => (
-            <li key={a.id} className="row wrap">
+            <li key={a.id} className="row wrap manage">
               <span className="grow">
                 {a.name}{groupLabel(a) && <small className="muted"> [{groupLabel(a)}]</small>}
                 <small className={a.linkedProblemIds.length ? 'muted' : 'warn-text'}>
