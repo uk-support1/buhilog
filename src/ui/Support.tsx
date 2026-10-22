@@ -30,3 +30,17 @@ export function SharedDeviceNotice() {
     </section>
   );
 }
+
+export function InstallGuide() {
+  return (
+    <section className="card" aria-labelledby="install-h">
+      <h2 id="install-h">iPhoneのホーム画面に追加する</h2>
+      <ol>
+        <li>Safariでこのページを開きます（Chromeではなく Safari）。</li>
+        <li>画面下の共有ボタン（□に↑）を押します。</li>
+        <li>「ホーム画面に追加」→「追加」を押します。</li>
+      </ol>
+      <p className="muted small">以後はホーム画面のアイコンから開いてください。Safariのタブのままだと、しばらく使わないときに記録が消えることがあります。</p>
+    </section>
+  );
+}

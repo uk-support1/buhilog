@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { BackupPanel } from './BackupPanel';
-import { SharedDeviceNotice, SupportInfo } from '../ui/Support';
+import { InstallGuide, SharedDeviceNotice, SupportInfo } from '../ui/Support';
 
 export function Settings({ repo, onWiped, onRestored }: { repo: Repo; onWiped: () => void; onRestored: () => void }) {
   const [persisted, setPersisted] = useState<boolean | null>(null);
@@ -23,6 +23,7 @@ export function Settings({ repo, onWiped, onRestored }: { repo: Repo; onWiped: (
   return (
     <div>
       <SupportInfo />
+      <InstallGuide />
       <SharedDeviceNotice />
       <BackupPanel repo={repo} onRestored={onRestored} />
       <section className="card">
