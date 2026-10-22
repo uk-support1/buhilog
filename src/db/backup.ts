@@ -93,6 +93,10 @@ export function buildCsv(b: Backup): string {
     for (const [id, r] of Object.entries(e.problemRatings)) rows.push([e.localDate, '困りごと(0-10)', pname.get(id) ?? id, r ?? '未入力', e.problemNotes[id] ?? '']);
     for (const [id, s] of Object.entries(e.approachStatuses)) rows.push([e.localDate, 'アプローチ', aname.get(id) ?? id, STATUS_JA[s], '']);
     if (e.sleepHours != null) rows.push([e.localDate, '生活', '睡眠時間(時間)', e.sleepHours, '']);
+    if (e.bedtime) rows.push([e.localDate, '睡眠', '就寝時刻', e.bedtime, '']);
+    if (e.wakeTime) rows.push([e.localDate, '睡眠', '起床時刻', e.wakeTime, '']);
+    if (e.napHours != null) rows.push([e.localDate, '睡眠', '昼寝(時間)', e.napHours, '']);
+    e.awakenings?.forEach((n, i) => { if (n != null) rows.push([e.localDate, '睡眠', `中途覚醒 ${i + 1}〜${i + 2}時間目(回)`, n, '']); });
     if (e.stressRating != null) rows.push([e.localDate, '生活', 'ストレス(0-10)', e.stressRating, '']);
     if (e.note) rows.push([e.localDate, '生活', '自由メモ', '', e.note]);
   }

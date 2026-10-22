@@ -1,0 +1,26 @@
+// 睡眠タブの見た目確認（架空データのみ）: node tests/e2e/shots-sleep.mjs <出力ディレクトリ>
+import { chromium } from 'playwright-core';
+import { spawn } from 'node:child_process';
+const out = process.argv[2] ?? '.';
+const srv = spawn('npx', ['vite', 'preview', '--port', '4175', '--strictPort'], { stdio: 'ignore' });
+await new Promise((r) => setTimeout(r, 2500));
+const b = await chromium.launch({ executablePath: process.env.CHROMIUM, args: ['--no-sandbox'] });
+const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, locale: 'ja-JP' });
+const p = await ctx.newPage();
+p.on('dialog', (d) => d.accept(d.type() === 'prompt' ? '睡眠' : undefined));
+await p.goto('http://localhost:4175/buhilog/');
+await p.getByRole('button', { name: 'はじめる' }).click();
+await p.getByRole('button', { name: '後で登録する' }).click();
+await p.getByRole('button', { name: '管理' }).click();
+await p.getByLabel('新しい困りごと').fill('睡眠の質');
+await p.getByRole('button', { name: '追加' }).first().click();
+await p.getByRole('button', { name: 'グループ', exact: true }).first().click();
+await p.getByRole('button', { name: '今日' }).click();
+await p.getByLabel('就寝時刻').fill('23:30');
+await p.getByLabel('起床時刻').fill('06:30');
+await p.getByLabel(/昼寝/).fill('1');
+await p.getByLabel('3〜4時間目').selectOption('1');
+await p.getByLabel('5〜6時間目').selectOption('2');
+await p.getByText('合計睡眠時間（自動）').scrollIntoViewIfNeeded();
+await p.screenshot({ path: `${out}/5-sleep.png` });
+await b.close(); srv.kill();

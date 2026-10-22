@@ -69,3 +69,6 @@ main.card { margin-top:calc(16px + env(safe-area-inset-top)); }
 .gtabs button small { font-size:.7rem; font-weight:500; opacity:.85; }
 .item { padding:8px 0; border-bottom:2px dotted var(--line); } .item:last-child { border-bottom:0; } .item h2, .item h3 { margin:0 0 4px; font-size:1rem; padding-left:0; border-left:0; }
 .item details { margin-top:4px; } .item summary { cursor:pointer; color:var(--muted); min-height:32px; }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:8px; } .awake-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px 8px; } .awake-grid .field { margin:4px 0; font-size:.8rem; }
+.total { background:var(--mint); border-radius:12px; padding:6px 10px; margin:8px 0; }
+input[type=time] { min-height:44px; }

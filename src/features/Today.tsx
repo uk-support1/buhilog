@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { formatJa, isValidLocalDate, toLocalDate } from '../domain/date';
 import { buildGroups, hasNamedGroups } from '../domain/groups';
+import { AWAKE_COUNTED, AWAKE_LABELS, awakeningTotal, totalSleepHours, nightHours } from '../domain/sleep';
 import type { Approach, ApproachStatus, Problem } from '../domain/types';
 import { Buhio } from '../ui/Buhio';
 import { RatingInput } from '../ui/RatingInput';
@@ -11,10 +12,14 @@ interface Form {
   notes: Record<string, string>;
   statuses: Record<string, ApproachStatus>;
   sleep: string;
+  bed: string;
+  wake: string;
+  nap: string;
+  awake: string[];
   stress: number | null;
   note: string;
 }
-const emptyForm = (): Form => ({ ratings: {}, notes: {}, statuses: {}, sleep: '', stress: null, note: '' });
+const emptyForm = (): Form => ({ ratings: {}, notes: {}, statuses: {}, sleep: '', bed: '', wake: '', nap: '', awake: Array(6).fill(''), stress: null, note: '' });
 
 const STATUS_LABEL: Record<ApproachStatus, string> = { done: '実施した', not_done: '実施しなかった', unknown: '未回答' };
 const MEMO_TAB = '__memo__';
@@ -50,13 +55,17 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
               notes: { ...e.problemNotes },
               statuses: { ...e.approachStatuses },
               sleep: e.sleepHours != null ? String(e.sleepHours) : '',
+              bed: e.bedtime ?? '',
+              wake: e.wakeTime ?? '',
+              nap: e.napHours != null ? String(e.napHours) : '',
+              awake: Array.from({ length: 6 }, (_, i) => (e.awakenings?.[i] != null ? String(e.awakenings[i]) : '')),
               stress: e.stressRating ?? null,
               note: e.note ?? '',
             }
           : emptyForm(),
       );
       setDirty(false);
-      setDetail(!!e && (Object.values(e.problemNotes).some(Boolean) || e.sleepHours != null || e.stressRating != null || !!e.note));
+      setDetail(!!e && (Object.values(e.problemNotes).some(Boolean) || e.sleepHours != null || e.bedtime != null || e.wakeTime != null || e.napHours != null || !!e.awakenings || e.stressRating != null || !!e.note));
       setMsg('');
       setErr('');
     })();
@@ -77,11 +86,20 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
 
   const save = async () => {
     setErr('');
-    const sleepNum = form.sleep.trim() === '' ? undefined : Number(form.sleep);
-    if (sleepNum !== undefined && (Number.isNaN(sleepNum) || sleepNum < 0 || sleepNum > 24)) {
+    const manualSleep = form.sleep.trim() === '' ? undefined : Number(form.sleep);
+    if (manualSleep !== undefined && (Number.isNaN(manualSleep) || manualSleep < 0 || manualSleep > 24)) {
       setErr('睡眠時間は0〜24の数字で入力してください。');
       return;
     }
+    const napNum = form.nap.trim() === '' ? undefined : Number(form.nap);
+    if (napNum !== undefined && (Number.isNaN(napNum) || napNum < 0 || napNum > 24)) {
+      setErr('昼寝の時間は0〜24の数字で入力してください。');
+      return;
+    }
+    // 就寝・起床が揃っていれば、合計睡眠時間（夜＋昼寝）を自動計算して保存する
+    const autoSleep = totalSleepHours(form.bed || undefined, form.wake || undefined, napNum);
+    const sleepNum = autoSleep ?? manualSleep;
+    const awakenings = form.awake.some((x) => x !== '') ? form.awake.map((x) => (x === '' ? null : Number(x))) : undefined;
     try {
       await repo.saveEntry({
         localDate: date,
@@ -89,6 +107,10 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
         problemNotes: Object.fromEntries(Object.entries(form.notes).filter(([, v]) => v.trim() !== '')),
         approachStatuses: form.statuses,
         sleepHours: sleepNum,
+        bedtime: form.bed || undefined,
+        wakeTime: form.wake || undefined,
+        napHours: napNum,
+        awakenings,
         stressRating: form.stress ?? undefined,
         note: form.note.trim() === '' ? undefined : form.note,
       });
@@ -145,13 +167,64 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
     </div>
   );
 
+  const napNumber = form.nap.trim() === '' || Number.isNaN(Number(form.nap)) ? undefined : Number(form.nap);
+  const night = nightHours(form.bed || undefined, form.wake || undefined);
+  const autoTotal = totalSleepHours(form.bed || undefined, form.wake || undefined, napNumber);
+  const awakeNums = form.awake.map((x) => (x === '' ? null : Number(x)));
+  const awakeSum = awakeningTotal(awakeNums);
+  const fmtH = (h: number) => `${Math.round(h * 100) / 100}`;
+
+  const sleepCard = (
+    <section className="card" aria-label="睡眠">
+      <h2>睡眠</h2>
+      <div className="two">
+        <label className="field">
+          就寝時刻
+          <input type="time" value={form.bed} onChange={(e) => edit((f) => ({ ...f, bed: e.target.value }))} />
+        </label>
+        <label className="field">
+          起床時刻
+          <input type="time" value={form.wake} onChange={(e) => edit((f) => ({ ...f, wake: e.target.value }))} />
+        </label>
+      </div>
+      <label className="field">
+        昼寝（時間）
+        <input inputMode="decimal" placeholder="例: 1 または 0.5" value={form.nap} onChange={(e) => edit((f) => ({ ...f, nap: e.target.value }))} />
+      </label>
+      {autoTotal != null ? (
+        <p className="total" role="status">
+          合計睡眠時間（自動）： <strong>{fmtH(autoTotal)} 時間</strong>
+          <small className="muted"> 夜 {fmtH(night ?? 0)}{napNumber ? ` ＋ 昼寝 ${fmtH(napNumber)}` : ''}</small>
+        </p>
+      ) : (
+        <label className="field">
+          睡眠時間（時間）※就寝・起床を入れると自動で計算します
+          <input inputMode="decimal" placeholder="例: 6.5" value={form.sleep} onChange={(e) => edit((f) => ({ ...f, sleep: e.target.value }))} />
+        </label>
+      )}
+      <fieldset>
+        <legend>中途覚醒の回数（眠ってからの時間ごと）</legend>
+        <div className="awake-grid">
+          {AWAKE_LABELS.map((label, i) => (
+            <label key={label} className="field">
+              {label}{i >= AWAKE_COUNTED ? '（合計に含めない）' : ''}
+              <select value={form.awake[i]} onChange={(e) => edit((f) => ({ ...f, awake: f.awake.map((x, j) => (j === i ? e.target.value : x)) }))}>
+                <option value="">未入力</option>
+                {Array.from({ length: 10 }, (_, n) => <option key={n} value={String(n)}>{n}回</option>)}
+              </select>
+            </label>
+          ))}
+        </div>
+        <p className="total" role="status">合計（1〜6時間目）： <strong>{awakeSum == null ? '未入力' : `${awakeSum}回`}</strong></p>
+      </fieldset>
+    </section>
+  );
+
+  const sleepInTab = grouped && groups.some((g) => g.name === '睡眠');
+
   const bodySection = (
     <section className="card">
-      <h2>睡眠とメモ（任意）</h2>
-      <label className="field">
-        睡眠時間（時間）
-        <input inputMode="decimal" placeholder="例: 6.5" value={form.sleep} onChange={(e) => edit((f) => ({ ...f, sleep: e.target.value }))} />
-      </label>
+      <h2>{sleepInTab ? 'ストレスとメモ（任意）' : '睡眠とメモ（任意）'}</h2>
       <div className="field">
         ストレス（0〜10）
         <RatingInput label="ストレス" value={form.stress} onChange={(v) => edit((f) => ({ ...f, stress: v }))} />
@@ -162,6 +235,12 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
       </label>
       {!grouped && <button type="button" onClick={() => setDetail(false)}>くわしい入力をたたむ</button>}
     </section>
+  );
+  const bodyWithSleep = (
+    <>
+      {!sleepInTab && sleepCard}
+      {bodySection}
+    </>
   );
 
   const progress = (g: (typeof groups)[number]) => {
@@ -196,15 +275,16 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
               </button>
             ))}
             <button role="tab" aria-selected={activeTab === MEMO_TAB} className={activeTab === MEMO_TAB ? 'sel' : ''} onClick={() => setTab(MEMO_TAB)}>
-              睡眠・メモ
+              {sleepInTab ? 'メモ' : '睡眠・メモ'}
             </button>
           </div>
           {activeTab === MEMO_TAB
-            ? bodySection
+            ? bodyWithSleep
             : groups
                 .filter((g) => g.name === activeTab)
-                .map((g) =>
-                  g.sections.map((s) => (
+                .map((g) => [
+                  g.name === '睡眠' ? <div key="sleep-card">{sleepCard}</div> : null,
+                  ...g.sections.map((s) => (
                     <section className="card" key={s.title ?? '_'} aria-label={s.title ?? g.name}>
                       <h2>{s.title ?? g.name}</h2>
                       {s.problems.length > 0 && <p className="muted small">0＝なし／良い 〜 10＝最もつらい</p>}
@@ -213,7 +293,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
                       {s.approaches.map(approachBlock)}
                     </section>
                   )),
-                )}
+                ])}
         </>
       ) : (
         <>
@@ -234,7 +314,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
               ＋ くわしく入力する（メモ・睡眠・ストレス）
             </button>
           )}
-          {detail && bodySection}
+          {detail && bodyWithSleep}
         </>
       )}
 
