@@ -58,3 +58,4 @@ table { width:100%; font-size:.9rem; } th { text-align:left; font-weight:400; }
 .subnav button.sel { background:var(--accent); color:#fff; box-shadow:0 2px 8px rgba(217,61,104,.3); }
 .rating .skip[aria-checked="true"] { background:var(--accent) !important; color:#fff; }
 .caution { display:flex; gap:8px; align-items:flex-start; } .caution ul { margin:0; padding-left:18px; } .gallery .use { display:block; font-size:.7rem; color:var(--muted); }
+.more { width:100%; margin:0 0 14px; background:var(--sky); border-color:#bfe0f7; color:var(--sky-fg); font-weight:700; }
