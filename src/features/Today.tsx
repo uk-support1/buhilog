@@ -215,6 +215,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
             </label>
           ))}
         </div>
+        <button type="button" onClick={() => edit((f) => ({ ...f, awake: Array(6).fill('0') }))}>中途覚醒なし（すべて0回）</button>
         <p className="total" role="status">合計（1〜6時間目）： <strong>{awakeSum == null ? '未入力' : `${awakeSum}回`}</strong></p>
       </fieldset>
     </section>
@@ -246,8 +247,14 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
   const progress = (g: (typeof groups)[number]) => {
     const ps = g.sections.flatMap((s) => s.problems);
     const as = g.sections.flatMap((s) => s.approaches);
-    const filled = ps.filter((p) => form.ratings[p.id] != null).length + as.filter((a) => (form.statuses[a.id] ?? 'unknown') !== 'unknown').length;
-    return `${filled}/${ps.length + as.length}`;
+    let filled = ps.filter((p) => form.ratings[p.id] != null).length + as.filter((a) => (form.statuses[a.id] ?? 'unknown') !== 'unknown').length;
+    let total = ps.length + as.length;
+    if (g.name === '睡眠') {
+      // 睡眠タブの入力欄（就寝・起床・中途覚醒）も数える。昼寝は「しない日」が多いので数えない
+      total += 3;
+      filled += (form.bed ? 1 : 0) + (form.wake ? 1 : 0) + (form.awake.some((x) => x !== '') ? 1 : 0);
+    }
+    return `${filled}/${total}`;
   };
 
   return (

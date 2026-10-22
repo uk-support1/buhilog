@@ -68,7 +68,7 @@ describe('グループ（タブ）表示', () => {
     const user = userEvent.setup();
     render(<Today repo={repo} initialDate="2026-05-05" />);
     await screen.findByRole('tablist');
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['困りごと0/1', '睡眠0/1', '朝要因0/1', 'メモ']);
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['困りごと0/1', '睡眠0/4', '朝要因0/1', 'メモ']);
     expect(screen.getByText('頭痛')).toBeInTheDocument();
     expect(screen.queryByText('朝ヨガ')).toBeNull();
     await user.click(screen.getByRole('tab', { name: /朝要因/ }));
@@ -102,6 +102,8 @@ describe('睡眠の入力', () => {
     await user.selectOptions(screen.getByLabelText('5〜6時間目'), '2');
     await user.selectOptions(screen.getByLabelText(/6〜7時間目/), '3');
     expect(screen.getByText(/合計（1〜6時間目）/).textContent).toMatch(/3回/);
+    // 睡眠タブの進捗: 就寝・起床・中途覚醒の3項目が入力済み（睡眠の質は未入力）
+    expect(screen.getByRole('tab', { name: /睡眠3\/4/ })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /保存する/ }));
     await screen.findByText(/保存しました/);
     const e = await repo.getEntry('2026-05-06');
@@ -112,5 +114,21 @@ describe('睡眠の入力', () => {
     const repo = createRepo(new BuhiLogDB('ui6'));
     await expect(repo.saveEntry({ localDate: '2026-05-07', problemRatings: {}, problemNotes: {}, approachStatuses: {}, bedtime: '25:00' })).rejects.toThrow();
     await expect(repo.saveEntry({ localDate: '2026-05-07', problemRatings: {}, problemNotes: {}, approachStatuses: {}, awakenings: [1, 2] })).rejects.toThrow();
+  });
+});
+
+describe('中途覚醒なしボタン', () => {
+  it('1回のタップで全区間を0回にし、合計0回と表示する（未入力とは区別）', async () => {
+    const repo = createRepo(new BuhiLogDB('ui7'));
+    await repo.addProblem('睡眠の質', undefined, '睡眠');
+    const user = userEvent.setup();
+    render(<Today repo={repo} initialDate="2026-05-08" />);
+    await screen.findByRole('tablist');
+    expect(screen.getByText(/合計（1〜6時間目）/).textContent).toMatch(/未入力/);
+    await user.click(screen.getByRole('button', { name: /中途覚醒なし/ }));
+    expect(screen.getByText(/合計（1〜6時間目）/).textContent).toMatch(/0回/);
+    await user.click(screen.getByRole('button', { name: /保存する/ }));
+    await screen.findByText(/保存しました/);
+    expect((await repo.getEntry('2026-05-08'))?.awakenings).toEqual([0, 0, 0, 0, 0, 0]);
   });
 });
