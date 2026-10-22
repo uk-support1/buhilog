@@ -89,3 +89,10 @@ input[type=time] { min-height:44px; }
 .score button { flex:0 0 52px; } .score button.s1:not(.sel), .score button.s2:not(.sel) { background:var(--accent-soft); }
 .score button.s3:not(.sel) { background:var(--sun); } .score button.s4:not(.sel), .score button.s5:not(.sel) { background:var(--mint); }
 .score .skip { flex:0 0 auto; }
+
+/* 時刻の選択・中途覚醒（縦並び）・量の入力 */
+.time { border:0; padding:0; margin:8px 0; min-width:0; } .time legend { font-size:.9rem; font-weight:600; padding:0; margin-bottom:2px; }
+.time select { width:calc(50% - 3px); min-width:0; display:inline-block; padding-left:8px; padding-right:4px; } .time select + select { margin-left:4px; }
+.awake-list { display:flex; flex-direction:column; gap:4px; margin:4px 0 8px; }
+.awake-row { display:grid; grid-template-columns:1fr 130px; align-items:center; gap:8px; min-height:44px; border-bottom:1px dotted var(--line); }
+.qty { display:flex; align-items:center; gap:8px; margin-top:6px; font-size:.9rem; font-weight:600; } .qty select { width:auto; min-width:110px; } .qty-num { display:inline-flex; align-items:center; gap:4px; } .qty-num input { width:96px; }

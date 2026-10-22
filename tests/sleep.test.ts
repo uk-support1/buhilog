@@ -17,10 +17,10 @@ describe('sleep', () => {
     expect(totalSleepHours('23:00', undefined)).toBeNull();
     expect(nightHours('25:00', '06:00')).toBeNull();
   });
-  it('中途覚醒の合計は1〜6時間目（6〜7時間目は含めない）、未入力と0を区別', () => {
-    expect(awakeningTotal([null, null, 1, 1, 1, 1])).toBe(3);
-    expect(awakeningTotal([0, null, null, null, null, 3])).toBe(0);
-    expect(awakeningTotal([null, null, null, null, null, 2])).toBeNull();
+  it('中途覚醒の合計は5区間（1〜6時間目）の合計、未入力と0を区別', () => {
+    expect(awakeningTotal([null, null, 1, 1, 1])).toBe(3);
+    expect(awakeningTotal([0, null, null, null, null])).toBe(0);
+    expect(awakeningTotal([null, null, null, null, null])).toBeNull();
     expect(awakeningTotal(undefined)).toBeNull();
   });
 });

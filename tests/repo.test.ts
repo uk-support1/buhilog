@@ -18,17 +18,17 @@ describe('repo', () => {
 
   it('同日の保存は上書き更新で重複しない', async () => {
     const { repo } = fresh();
-    const a = await repo.saveEntry({ ...base, localDate: '2026-05-01', note: '1回目' });
-    const b = await repo.saveEntry({ ...base, localDate: '2026-05-01', note: '2回目' });
+    const a = await repo.saveEntry({ ...base, localDate: '2026-05-01', noteOther: '1回目' });
+    const b = await repo.saveEntry({ ...base, localDate: '2026-05-01', noteOther: '2回目' });
     expect(b.id).toBe(a.id);
     expect(b.createdAt).toBe(a.createdAt);
     expect(await repo.listEntries()).toHaveLength(1);
-    expect((await repo.getEntry('2026-05-01'))?.note).toBe('2回目');
+    expect((await repo.getEntry('2026-05-01'))?.noteOther).toBe('2回目');
   });
 
   it('同日の同時保存でも1件', async () => {
     const { repo } = fresh();
-    await Promise.all([1, 2, 3].map((i) => repo.saveEntry({ ...base, localDate: '2026-05-02', note: String(i) })));
+    await Promise.all([1, 2, 3].map((i) => repo.saveEntry({ ...base, localDate: '2026-05-02', noteOther: String(i) })));
     expect(await repo.listEntries()).toHaveLength(1);
   });
 
@@ -75,10 +75,10 @@ describe('repo', () => {
 
   it('再オープン後もデータが残る（永続化）', async () => {
     const db1 = new BuhiLogDB('persist');
-    await createRepo(db1).saveEntry({ ...base, localDate: '2026-05-01', note: '残る' });
+    await createRepo(db1).saveEntry({ ...base, localDate: '2026-05-01', noteOther: '残る' });
     db1.close();
     const db2 = new BuhiLogDB('persist');
-    expect((await createRepo(db2).getEntry('2026-05-01'))?.note).toBe('残る');
+    expect((await createRepo(db2).getEntry('2026-05-01'))?.noteOther).toBe('残る');
   });
 
   it('設定の保存と全削除', async () => {

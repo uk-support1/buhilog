@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Repo } from './repo';
 import type { BuhiLogDB } from './db';
 import { convertLegacyRatings } from '../domain/scale';
+import { SCHEMA_VERSION } from '../domain/types';
 import {
   AppSettingsSchema, ApproachSchema, DailyEntrySchema, ProblemSchema,
   type AppSettings, type Approach, type DailyEntry, type Problem,
@@ -31,6 +32,19 @@ export async function buildBackup(repo: Repo): Promise<Backup> {
   };
 }
 
+/** 旧い書式の差分を新しい形に直す（中途覚醒は5区間、メモは3分割、睡眠の質は「理由」を常に表示） */
+function normalizeOlder(json: unknown): void {
+  if (!json || typeof json !== 'object') return;
+  const j = json as { dailyEntries?: Record<string, unknown>[]; problems?: Record<string, unknown>[]; settings?: { schemaVersion?: number } };
+  for (const e of j.dailyEntries ?? []) {
+    if (Array.isArray(e.awakenings) && e.awakenings.length > 5) e.awakenings = e.awakenings.slice(0, 5);
+    if (typeof e.note === 'string' && e.note) e.noteOther = e.noteOther ? `${e.noteOther}\n${e.note}` : e.note;
+    delete e.note;
+  }
+  for (const p of j.problems ?? []) if (p.name === '睡眠の質' && p.noteLabel == null) { p.noteLabel = '理由'; p.noteAlways = true; }
+  if (j.settings) j.settings.schemaVersion = SCHEMA_VERSION;
+}
+
 export type ParseResult =
   | { ok: true; backup: Backup; summary: { problems: number; approaches: number; dailyEntries: number; exportedAt: string } }
   | { ok: false; errors: string[] };
@@ -48,6 +62,7 @@ export function parseBackup(text: string): ParseResult {
     for (const p of j.problems ?? []) if (p.description) p.description = p.description.replace('（0＝よく眠れた）', '（5＝よく眠れた）');
     if (j.settings) j.settings.schemaVersion = 2;
   }
+  normalizeOlder(json);
   const r = BackupSchema.safeParse(json);
   if (!r.success) {
     return { ok: false, errors: ['ぶひろぐのバックアップ形式ではないか、内容に不正な値があります。', ...r.error.issues.slice(0, 3).map((i) => `${i.path.join('.')}: ${i.message}`)] };
@@ -103,14 +118,20 @@ export function buildCsv(b: Backup): string {
   const rows: (string | number)[][] = [['日付', '種類', '項目', '値', 'メモ']];
   for (const e of b.dailyEntries) {
     for (const [id, r] of Object.entries(e.problemRatings)) rows.push([e.localDate, '困りごと(1-5, 5が良い)', pname.get(id) ?? id, r ?? '未入力', e.problemNotes[id] ?? '']);
-    for (const [id, s] of Object.entries(e.approachStatuses)) rows.push([e.localDate, 'アプローチ', aname.get(id) ?? id, STATUS_JA[s], '']);
+    for (const [id, s] of Object.entries(e.approachStatuses)) {
+      const q = e.approachQuantities?.[id];
+      const unit = b.approaches.find((a) => a.id === id)?.quantity?.unit ?? '';
+      rows.push([e.localDate, 'アプローチ', aname.get(id) ?? id, STATUS_JA[s], q != null ? `${q}${unit}` : '']);
+    }
     if (e.sleepHours != null) rows.push([e.localDate, '生活', '睡眠時間(時間)', e.sleepHours, '']);
     if (e.bedtime) rows.push([e.localDate, '睡眠', '就寝時刻', e.bedtime, '']);
     if (e.wakeTime) rows.push([e.localDate, '睡眠', '起床時刻', e.wakeTime, '']);
     if (e.napHours != null) rows.push([e.localDate, '睡眠', '昼寝(時間)', e.napHours, '']);
     e.awakenings?.forEach((n, i) => { if (n != null) rows.push([e.localDate, '睡眠', `中途覚醒 ${i + 1}〜${i + 2}時間目(回)`, n, '']); });
     if (e.stressRating != null) rows.push([e.localDate, '生活', 'ストレス(0-10)', e.stressRating, '']);
-    if (e.note) rows.push([e.localDate, '生活', '自由メモ', '', e.note]);
+    if (e.noteEvents) rows.push([e.localDate, 'メモ', '出来事', '', e.noteEvents]);
+    if (e.noteInsights) rows.push([e.localDate, 'メモ', '気づき', '', e.noteInsights]);
+    if (e.noteOther) rows.push([e.localDate, 'メモ', 'その他', '', e.noteOther]);
   }
   return '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
 }

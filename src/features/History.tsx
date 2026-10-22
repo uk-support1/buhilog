@@ -43,7 +43,7 @@ export function History({ repo, onEdit }: { repo: Repo; onEdit: (date: string) =
                   {shortGroupName(p.name)} {p.filled}/{p.total}
                 </span>
               ))}
-              {e.note && <span className="hchip memo">メモあり</span>}
+              {(e.noteEvents || e.noteInsights || e.noteOther) && <span className="hchip memo">メモあり</span>}
             </div>
           ) : (
             <div className="muted small">未記録</div>

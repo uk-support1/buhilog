@@ -16,7 +16,7 @@ describe('履歴', () => {
     const today = toLocalDate();
     await repo.saveEntry({
       localDate: today, problemRatings: { [p1.id]: 5, [p2.id]: 3 }, problemNotes: {}, approachStatuses: { [a1.id]: 'done' },
-      bedtime: '23:00', wakeTime: '06:00', awakenings: [0, 0, 0, 0, 0, 0], note: 'メモ',
+      bedtime: '23:00', wakeTime: '06:00', awakenings: [0, 0, 0, 0, 0], noteEvents: 'メモ',
     });
     await repo.saveEntry({ localDate: addDays(today, -20), problemRatings: { [p3.id]: 2 }, problemNotes: {}, approachStatuses: {} });
     const user = userEvent.setup();

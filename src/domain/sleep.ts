@@ -1,8 +1,13 @@
 /** 睡眠の計算（就寝・起床・昼寝 → 合計睡眠時間、中途覚醒の合計） */
 
-export const AWAKE_LABELS = ['1〜2時間目', '2〜3時間目', '3〜4時間目', '4〜5時間目', '5〜6時間目', '6〜7時間目'] as const;
-/** 合計に含める区間の数（1〜6時間目）。6〜7時間目は記録するが合計に入れない（これまでの運用に合わせる） */
+export const AWAKE_LABELS = ['1〜2時間目', '2〜3時間目', '3〜4時間目', '4〜5時間目', '5〜6時間目'] as const;
+/** 合計に含める区間の数（1〜6時間目の5区間すべて） */
 export const AWAKE_COUNTED = 5;
+
+/** 時刻の選択: 分は10分単位 */
+export const MINUTE_STEPS = ['00', '10', '20', '30', '40', '50'] as const;
+export const DEFAULT_BEDTIME = '23:00';
+export const DEFAULT_WAKETIME = '07:00';
 
 const toMin = (hhmm: string): number | null => {
   const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(hhmm);
@@ -24,7 +29,7 @@ export function totalSleepHours(bed?: string, wake?: string, napHours?: number):
   return Math.round((n + (napHours ?? 0)) * 100) / 100;
 }
 
-/** 中途覚醒の合計（1〜6時間目）。すべて未入力なら null（0回とは区別する） */
+/** 中途覚醒の合計（1〜6時間目の5区間）。すべて未入力なら null（0回とは区別する） */
 export function awakeningTotal(a?: (number | null)[]): number | null {
   if (!a) return null;
   const vals = a.slice(0, AWAKE_COUNTED).filter((x): x is number => x != null);

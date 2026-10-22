@@ -38,6 +38,25 @@ export class BuhiLogDB extends Dexie {
         });
         await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 2; });
       });
+    // v3: 中途覚醒は5区間に（6〜7時間目を廃止）、メモを3つに分割（旧「自由メモ」は「その他」へ）、睡眠の質のメモは「理由」として常に表示。
+    this.version(3)
+      .stores({
+        problems: 'id, order, archivedAt',
+        approaches: 'id, archivedAt',
+        dailyEntries: 'id, &localDate',
+        settings: 'key',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('dailyEntries').toCollection().modify((e: { awakenings?: unknown[]; note?: string; noteOther?: string }) => {
+          if (Array.isArray(e.awakenings) && e.awakenings.length > 5) e.awakenings = e.awakenings.slice(0, 5);
+          if (e.note) { e.noteOther = e.noteOther ? `${e.noteOther}\n${e.note}` : e.note; }
+          delete e.note;
+        });
+        await tx.table('problems').toCollection().modify((p: { name?: string; noteLabel?: string; noteAlways?: boolean }) => {
+          if (p.name === '睡眠の質') { p.noteLabel = '理由'; p.noteAlways = true; }
+        });
+        await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 3; });
+      });
   }
 }
 

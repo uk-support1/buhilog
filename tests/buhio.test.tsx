@@ -15,6 +15,6 @@ describe('Buhio', () => {
     }
   });
   it('PWAアイコン(PNG)が存在する', () => {
-    for (const f of ['apple-touch-icon.png', 'icon-192.png', 'icon-512.png']) expect(existsSync(`public/${f}`)).toBe(true);
+    for (const f of ['apple-touch-icon-v2.png', 'icon-v2-192.png', 'icon-v2-512.png']) expect(existsSync(`public/${f}`)).toBe(true);
   });
 });
