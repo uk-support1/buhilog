@@ -1,15 +1,20 @@
 import { render } from '@testing-library/react';
+import { existsSync } from 'node:fs';
 import { Buhio, POSES } from '../src/ui/Buhio';
 
 describe('Buhio', () => {
-  it('全ポーズが描画でき、装飾として読み上げ対象外', () => {
+  it('全ポーズの画像ファイルが存在し、装飾として読み上げ対象外', () => {
     for (const { pose } of POSES) {
+      expect(existsSync(`public/buhio/${pose}.webp`)).toBe(true);
       const { container, unmount } = render(<Buhio pose={pose} />);
-      const svg = container.querySelector('svg')!;
-      expect(svg.getAttribute('data-pose')).toBe(pose);
-      expect(svg.getAttribute('aria-hidden')).toBe('true');
+      const img = container.querySelector('img')!;
+      expect(img.getAttribute('data-pose')).toBe(pose);
+      expect(img.getAttribute('alt')).toBe('');
+      expect(img.getAttribute('aria-hidden')).toBe('true');
       unmount();
     }
-    expect(POSES.map((p) => p.pose)).toContain('back');
+  });
+  it('PWAアイコン(PNG)が存在する', () => {
+    for (const f of ['apple-touch-icon.png', 'icon-192.png', 'icon-512.png']) expect(existsSync(`public/${f}`)).toBe(true);
   });
 });

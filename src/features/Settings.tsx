@@ -36,11 +36,11 @@ export function Settings({ repo, onWiped, onRestored }: { repo: Repo; onWiped: (
         </p>
       </section>
       <section className="card">
-        <h2>ぶひお（仮デザイン）</h2>
-        <p className="muted small">正式なキャラクター素材が届くまでの、オリジナルの仮の絵です。</p>
+        <h2>ぶひお</h2>
+        <p className="muted small">福祉ITパートナーのキャラクターです。画面のあちこちで見守っています。</p>
         <div className="gallery">
           {POSES.map((p) => (
-            <figure key={p.pose}><Buhio size={72} pose={p.pose} /><figcaption>{p.label}</figcaption></figure>
+            <figure key={p.pose}><Buhio size={84} pose={p.pose} /><figcaption>{p.label}<span className="use">{p.use}</span></figcaption></figure>
           ))}
         </div>
       </section>
