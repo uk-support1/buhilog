@@ -25,6 +25,8 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
   const [form, setForm] = useState<Form>(emptyForm());
   const [existing, setExisting] = useState(false);
   const [dirty, setDirty] = useState(false);
+  // かんたん記録: メモ・睡眠・ストレスは折りたたむ。すでに入力がある日は最初から開く
+  const [detail, setDetail] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
@@ -49,6 +51,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
           : emptyForm(),
       );
       setDirty(false);
+      setDetail(!!e && (Object.values(e.problemNotes).some(Boolean) || e.sleepHours != null || e.stressRating != null || !!e.note));
       setMsg('');
       setErr('');
     })();
@@ -113,15 +116,17 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
             value={form.ratings[p.id]}
             onChange={(v) => edit((f) => ({ ...f, ratings: { ...f.ratings, [p.id]: v } }))}
           />
-          <label className="field">
-            メモ（任意）
-            <textarea
-              rows={2}
-              maxLength={2000}
-              value={form.notes[p.id] ?? ''}
-              onChange={(e) => edit((f) => ({ ...f, notes: { ...f.notes, [p.id]: e.target.value } }))}
-            />
-          </label>
+          {detail && (
+            <label className="field">
+              メモ（任意）
+              <textarea
+                rows={2}
+                maxLength={2000}
+                value={form.notes[p.id] ?? ''}
+                onChange={(e) => edit((f) => ({ ...f, notes: { ...f.notes, [p.id]: e.target.value } }))}
+              />
+            </label>
+          )}
         </section>
       ))}
 
@@ -151,6 +156,12 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
         </section>
       )}
 
+      {!detail && (
+        <button type="button" className="more" onClick={() => setDetail(true)}>
+          ＋ くわしく入力する（メモ・睡眠・ストレス）
+        </button>
+      )}
+      {detail && (
       <section className="card">
         <h2>からだと気持ち（任意）</h2>
         <label className="field">
@@ -170,7 +181,9 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
           自由メモ
           <textarea rows={3} maxLength={2000} value={form.note} onChange={(e) => edit((f) => ({ ...f, note: e.target.value }))} />
         </label>
+        <button type="button" onClick={() => setDetail(false)}>くわしい入力をたたむ</button>
       </section>
+      )}
 
       {err && <p role="alert" className="err">{err}</p>}
       {msg && (
