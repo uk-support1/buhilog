@@ -1,4 +1,4 @@
-import type { Comparison } from './analytics';
+import { MIN_PER_GROUP, type Comparison } from './analytics';
 
 const f1 = (n: number) => n.toFixed(1);
 
@@ -30,7 +30,11 @@ export function describeComparison(c: Comparison, approach: string): { headline:
     ].filter(Boolean).join('、');
     return {
       headline: '判断材料が少ないため、参考値としてのみ表示します。',
-      lines: [...lines, `差の表示には、各${5}日以上の記録が必要です（あと: ${need}）。`],
+      lines: [
+        ...lines,
+        `差の表示には、各${MIN_PER_GROUP}日以上の記録が必要です（あと: ${need}）。`,
+        ...(c.periodDays < MIN_PER_GROUP * 2 ? [`直近${c.periodDays}日間では、合計でも${MIN_PER_GROUP * 2}日に届かないため、この期間では参考値までです。記録がたまったら「直近14日」以上に切り替えてください。`] : []),
+      ],
       caution,
     };
   }

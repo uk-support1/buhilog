@@ -47,3 +47,22 @@ describe('文言', () => {
     expect(mk(6, 6).lines.join('')).toMatch(/-3\.0ポイント/);
   });
 });
+
+describe('紐づけ・期間の案内', () => {
+  it('未紐づけのアプローチがあるとき、設定方法を案内する', async () => {
+    const repo = createRepo(new BuhiLogDB('rv2'));
+    await repo.addProblem('痛み');
+    await repo.addApproach('ストレッチ', []);
+    render(<Review repo={repo} />);
+    expect(await screen.findByText(/まだ紐づいていません/)).toBeInTheDocument();
+    expect(screen.getByText(/「ストレッチ」/)).toBeInTheDocument();
+  });
+  it('7日間では参考値止まりだと案内する', () => {
+    const e = (id: string, d: string, r: number, st: 'done' | 'not_done'): DailyEntry => ({ id, localDate: d, problemRatings: { p: r }, problemNotes: {}, approachStatuses: { a: st }, createdAt: 0, updatedAt: 0 });
+    const es = [e('1', '2026-05-26', 3, 'done'), e('2', '2026-05-27', 5, 'not_done'), e('3', '2026-05-28', 4, 'not_done')];
+    const t = describeComparison(compareApproach(es, 'p', 'a', '2026-05-28', 7), 'ストレッチ');
+    expect(t.lines.join('')).toMatch(/この期間では参考値までです/);
+    const t14 = describeComparison(compareApproach(es, 'p', 'a', '2026-05-28', 14), 'ストレッチ');
+    expect(t14.lines.join('')).not.toMatch(/この期間では参考値までです/);
+  });
+});
