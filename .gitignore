@@ -2,3 +2,9 @@ node_modules
 dist
 *.local
 today.png
+
+# 個人の実データは絶対にコミットしない
+*.xlsx
+*.xls
+buhilog-import*.json
+import-*.json

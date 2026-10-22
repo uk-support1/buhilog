@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { buildSeries, compareApproach, PERIODS, type Period } from '../domain/analytics';
 import { toLocalDate } from '../domain/date';
+import { buildGroups, hasNamedGroups } from '../domain/groups';
 import { describeComparison } from '../domain/text';
 import type { Approach, DailyEntry, Problem } from '../domain/types';
 import { Buhio } from '../ui/Buhio';
@@ -14,11 +15,13 @@ export function Review({ repo }: { repo: Repo }) {
   const [pid, setPid] = useState<string>('');
   const [period, setPeriod] = useState<Period>(28);
   const [loaded, setLoaded] = useState(false);
+  const [groupOrder, setGroupOrder] = useState<string[]>([]);
 
   useEffect(() => {
     void (async () => {
       const [ps, as, es] = await Promise.all([repo.listProblems(true), repo.listApproaches(true), repo.listEntries()]);
       setProblems(ps); setApproaches(as); setEntries(es);
+      setGroupOrder((await repo.getSettings()).groupOrder ?? []);
       setPid((cur) => cur || ps.find((p) => !p.archivedAt)?.id || ps[0]?.id || '');
       setLoaded(true);
     })();
@@ -27,6 +30,10 @@ export function Review({ repo }: { repo: Repo }) {
   const end = toLocalDate();
   const series = useMemo(() => (pid ? buildSeries(entries, pid, end, period) : null), [entries, pid, end, period]);
   const problem = problems.find((p) => p.id === pid);
+  const optionGroups = useMemo(() => {
+    const gs = buildGroups(problems, [], groupOrder).filter((g) => g.sections.some((s) => s.problems.length));
+    return hasNamedGroups(gs) ? gs.map((g) => ({ label: g.name, items: g.sections.flatMap((s) => s.problems) })) : [{ label: '', items: problems }];
+  }, [problems, groupOrder]);
 
   // 記録がある or 対象の困りごとに紐づくアプローチ（アーカイブ済みも、記録があれば含める）
   const relevant = approaches.filter(
@@ -42,7 +49,15 @@ export function Review({ repo }: { repo: Repo }) {
         <label className="field">
           困りごと
           <select value={pid} onChange={(e) => setPid(e.target.value)}>
-            {problems.map((p) => <option key={p.id} value={p.id}>{p.name}{p.archivedAt ? '（アーカイブ済み）' : ''}</option>)}
+            {optionGroups.map((g) =>
+              g.label ? (
+                <optgroup key={g.label} label={g.label}>
+                  {g.items.map((p) => <option key={p.id} value={p.id}>{p.name}{p.archivedAt ? '（アーカイブ済み）' : ''}</option>)}
+                </optgroup>
+              ) : (
+                g.items.map((p) => <option key={p.id} value={p.id}>{p.name}{p.archivedAt ? '（アーカイブ済み）' : ''}</option>)
+              ),
+            )}
           </select>
         </label>
         <div className="seg" role="radiogroup" aria-label="期間">
@@ -85,29 +100,44 @@ export function Review({ repo }: { repo: Repo }) {
               )}
             </div>
           )}
-          {relevant.map((a) => {
-            const c = compareApproach(entries, pid, a.id, end, period);
-            const t = describeComparison(c, a.name);
+          {(() => {
+            const items = relevant.map((a) => ({ a, c: compareApproach(entries, pid, a.id, end, period) }));
+            const ready = items.filter((x) => x.c.status !== 'impossible');
+            const waiting = items.filter((x) => x.c.status === 'impossible');
+            const card = ({ a, c }: (typeof items)[number]) => {
+              const t = describeComparison(c, a.name);
+              return (
+                <article key={a.id} className="cmp">
+                  <h3>{a.name}{a.archivedAt ? '（アーカイブ済み）' : ''}</h3>
+                  <p><strong>{t.headline}</strong></p>
+                  {t.lines.map((l, i) => <p key={i}>{l}</p>)}
+                  {c.status !== 'impossible' && c.imbalance && (
+                    <p className="warn">実施した日（{c.nDone}日）としなかった日（{c.nNotDone}日）の件数に大きな差があります。比較は慎重にご覧ください。</p>
+                  )}
+                  {(c.excludedUnknown > 0 || c.excludedNoRating > 0) && (
+                    <p className="muted small">除外: 実施状況が未回答の日 {c.excludedUnknown}日、症状の評価がない日 {c.excludedNoRating}日。</p>
+                  )}
+                  {t.caution.length > 0 && (
+                    <div className="caution">
+                      <Buhio size={64} pose="important" />
+                      <ul className="muted small">{t.caution.map((x) => <li key={x}>{x}</li>)}</ul>
+                    </div>
+                  )}
+                </article>
+              );
+            };
             return (
-              <article key={a.id} className="cmp">
-                <h3>{a.name}{a.archivedAt ? '（アーカイブ済み）' : ''}</h3>
-                <p><strong>{t.headline}</strong></p>
-                {t.lines.map((l, i) => <p key={i}>{l}</p>)}
-                {c.status !== 'impossible' && c.imbalance && (
-                  <p className="warn">実施した日（{c.nDone}日）としなかった日（{c.nNotDone}日）の件数に大きな差があります。比較は慎重にご覧ください。</p>
+              <>
+                {ready.map(card)}
+                {waiting.length > 0 && (
+                  <details className="cmp">
+                    <summary>まだ比較できない試したこと（{waiting.length}件）</summary>
+                    {waiting.map(card)}
+                  </details>
                 )}
-                {(c.excludedUnknown > 0 || c.excludedNoRating > 0) && (
-                  <p className="muted small">除外: 実施状況が未回答の日 {c.excludedUnknown}日、症状の評価がない日 {c.excludedNoRating}日。</p>
-                )}
-                {t.caution.length > 0 && (
-                  <div className="caution">
-                    <Buhio size={64} pose="important" />
-                    <ul className="muted small">{t.caution.map((x) => <li key={x}>{x}</li>)}</ul>
-                  </div>
-                )}
-              </article>
+              </>
             );
-          })}
+          })()}
         </section>
       )}
     </div>
