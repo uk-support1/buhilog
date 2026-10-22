@@ -19,6 +19,7 @@ export function Manage({ repo }: { repo: Repo }) {
   const [pName, setPName] = useState('');
   const [aName, setAName] = useState('');
   const [aLinks, setALinks] = useState<string[]>([]);
+  const [linkEditId, setLinkEditId] = useState<string | null>(null);
   const activeP = problems.filter((p) => !p.archivedAt);
   const archivedP = problems.filter((p) => p.archivedAt);
   const activeA = approaches.filter((a) => !a.archivedAt);
@@ -65,9 +66,38 @@ export function Manage({ repo }: { repo: Repo }) {
         <ul className="plain">
           {activeA.map((a) => (
             <li key={a.id} className="row wrap">
-              <span className="grow">{a.name}<small className="muted"> {a.linkedProblemIds.map(nameOf).join('、')}</small></span>
+              <span className="grow">
+                {a.name}
+                <small className={a.linkedProblemIds.length ? 'muted' : 'warn-text'}>
+                  {' '}{a.linkedProblemIds.length ? a.linkedProblemIds.map(nameOf).join('、') : '（対象の困りごとが未設定）'}
+                </small>
+              </span>
+              <button onClick={() => setLinkEditId(linkEditId === a.id ? null : a.id)}>対象を変更</button>
               <button onClick={() => { const n = rename(a.name); if (n) void run(() => repo.updateApproach(a.id, { name: n })); }}>名前変更</button>
               <button onClick={() => run(() => repo.setApproachArchived(a.id, true))}>アーカイブ</button>
+              {linkEditId === a.id && (
+                <fieldset className="grow-full">
+                  <legend>「{a.name}」の対象の困りごと（ふりかえりの比較に使います）</legend>
+                  {activeP.map((p) => (
+                    <label key={p.id} className="check">
+                      <input
+                        type="checkbox"
+                        checked={a.linkedProblemIds.includes(p.id)}
+                        onChange={(e) =>
+                          void run(() =>
+                            repo.updateApproach(a.id, {
+                              linkedProblemIds: e.target.checked
+                                ? [...a.linkedProblemIds, p.id]
+                                : a.linkedProblemIds.filter((x) => x !== p.id),
+                            }),
+                          )
+                        }
+                      />
+                      {p.name}
+                    </label>
+                  ))}
+                </fieldset>
+              )}
             </li>
           ))}
         </ul>

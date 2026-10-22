@@ -91,3 +91,15 @@ describe('repo', () => {
     expect((await repo.getSettings()).onboardingCompleted).toBe(false);
   });
 });
+
+describe('アプローチの紐づけ変更', () => {
+  it('登録後に対象の困りごとを追加・解除できる', async () => {
+    const { repo } = fresh();
+    const p = await repo.addProblem('痛み');
+    const a = await repo.addApproach('ストレッチ', []);
+    await repo.updateApproach(a.id, { linkedProblemIds: [p.id] });
+    expect((await repo.listApproaches())[0].linkedProblemIds).toEqual([p.id]);
+    await repo.updateApproach(a.id, { linkedProblemIds: [] });
+    expect((await repo.listApproaches())[0].linkedProblemIds).toEqual([]);
+  });
+});

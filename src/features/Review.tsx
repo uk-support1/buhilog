@@ -72,7 +72,19 @@ export function Review({ repo }: { repo: Repo }) {
         <section className="card">
           <h2>試したこととの関連</h2>
           <p className="muted small">順位づけはしません。実施した日と、しなかった日の平均を並べて見るだけです。</p>
-          {relevant.length === 0 && <p>この困りごとに紐づくアプローチがありません。「管理」から登録できます。</p>}
+          {relevant.length === 0 && (
+            <div>
+              <p>この困りごとに紐づくアプローチがありません。</p>
+              {approaches.filter((a) => !a.archivedAt && !a.linkedProblemIds.includes(pid)).length > 0 ? (
+                <p>
+                  登録済みの試したこと（{approaches.filter((a) => !a.archivedAt && !a.linkedProblemIds.includes(pid)).map((a) => `「${a.name}」`).join('')}）は、
+                  この困りごとにまだ紐づいていません。「記録」→「管理」→「対象を変更」で、{problem.name}にチェックを入れてください。
+                </p>
+              ) : (
+                <p>「記録」→「管理」から、試したことを登録できます。</p>
+              )}
+            </div>
+          )}
           {relevant.map((a) => {
             const c = compareApproach(entries, pid, a.id, end, period);
             const t = describeComparison(c, a.name);
