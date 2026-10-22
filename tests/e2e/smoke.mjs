@@ -22,7 +22,7 @@ await page.getByRole('button', { name: '管理' }).click();
 await page.getByLabel('新しいアプローチ').fill('ストレッチ');
 await page.getByRole('button', { name: '追加' }).last().click();
 await page.getByRole('button', { name: '今日' }).click();
-await page.getByRole('radiogroup', { name: '睡眠の強さ' }).getByRole('radio', { name: '4', exact: true }).click();
+await page.getByRole('radiogroup', { name: '睡眠の調子' }).getByRole('radio', { name: '4', exact: true }).click();
 await page.getByRole('button', { name: /保存する/ }).click();
 await page.getByText('保存しました').waitFor({ timeout: 5000 });
 check(true, '保存できる');

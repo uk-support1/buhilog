@@ -31,7 +31,7 @@ input[type=checkbox] { width:24px; min-height:24px; accent-color:var(--accent); 
 .field { display:block; margin:10px 0; font-size:.9rem; font-weight:600; }
 .rating { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
 .rating button { flex:0 0 44px; padding:0; font-weight:700; }
-.rating button:nth-child(-n+4):not(.sel) { background:var(--mint); } .rating button:nth-child(n+5):nth-child(-n+8):not(.sel) { background:var(--sun); } .rating button:nth-child(n+9):nth-child(-n+11):not(.sel) { background:var(--accent-soft); }
+.rating:not(.score) button:nth-child(-n+4):not(.sel) { background:var(--mint); } .rating:not(.score) button:nth-child(n+5):nth-child(-n+8):not(.sel) { background:var(--sun); } .rating:not(.score) button:nth-child(n+9):nth-child(-n+11):not(.sel) { background:var(--accent-soft); }
 .rating .skip { flex:0 0 auto; padding:0 12px; background:#f3eef0 !important; }
 .approach-row { margin:12px 0; } .approach-row .name { font-weight:700; }
 .seg { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
@@ -85,3 +85,7 @@ input[type=time] { min-height:44px; }
 
 .hrow.empty { padding:2px 0; } .hrow.empty .hmain { display:flex; gap:10px; align-items:baseline; } .hrow.empty strong { font-weight:600; font-size:.95rem; }
 .hrow.empty .hbtn button { min-height:34px; padding:0 12px; font-size:.8rem; }
+/* 困りごとの点数(1〜5): 1,2=悪い(ピンク) 3=ふつう(黄) 4,5=良い(緑)。色だけに頼らず数字も表示 */
+.score button { flex:0 0 52px; } .score button.s1:not(.sel), .score button.s2:not(.sel) { background:var(--accent-soft); }
+.score button.s3:not(.sel) { background:var(--sun); } .score button.s4:not(.sel), .score button.s5:not(.sel) { background:var(--mint); }
+.score .skip { flex:0 0 auto; }

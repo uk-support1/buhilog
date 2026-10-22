@@ -7,6 +7,8 @@ export const MAX_TEXT = 2000;
 const id = z.string().min(1).max(64);
 const ts = z.number().int().nonnegative();
 const rating = z.number().int().min(0).max(10);
+/** 困りごとの点数: 1〜5（5が良い） */
+const problemRating = z.number().int().min(1).max(5);
 const localDate = z.string().refine(isValidLocalDate, '日付の形式が正しくありません');
 
 export const ProblemSchema = z.object({
@@ -43,7 +45,7 @@ export type ApproachStatus = z.infer<typeof ApproachStatusSchema>;
 export const DailyEntrySchema = z.object({
   id,
   localDate,
-  problemRatings: z.record(z.string(), rating.nullable()),
+  problemRatings: z.record(z.string(), problemRating.nullable()),
   problemNotes: z.record(z.string(), z.string().max(MAX_TEXT)),
   approachStatuses: z.record(z.string(), ApproachStatusSchema),
   /** 合計睡眠時間（夜＋昼寝）。就寝・起床があれば自動計算した値を保存 */
@@ -74,7 +76,7 @@ export const AppSettingsSchema = z.object({
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: SCHEMA_VERSION,
   onboardingCompleted: false,

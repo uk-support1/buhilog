@@ -1,16 +1,17 @@
 import { z } from 'zod';
 import type { Repo } from './repo';
 import type { BuhiLogDB } from './db';
+import { convertLegacyRatings } from '../domain/scale';
 import {
   AppSettingsSchema, ApproachSchema, DailyEntrySchema, ProblemSchema,
   type AppSettings, type Approach, type DailyEntry, type Problem,
 } from '../domain/types';
 
-export const FORMAT_VERSION = 1;
+export const FORMAT_VERSION = 2;
 export const MAX_BACKUP_BYTES = 20 * 1024 * 1024;
 
 const BackupSchema = z.object({
-  formatVersion: z.literal(FORMAT_VERSION),
+  formatVersion: z.literal(2),
   exportedAt: z.string(),
   problems: z.array(ProblemSchema),
   approaches: z.array(ApproachSchema),
@@ -39,6 +40,14 @@ export function parseBackup(text: string): ParseResult {
   if (text.length > MAX_BACKUP_BYTES) return { ok: false, errors: ['ファイルが大きすぎます。'] };
   let json: unknown;
   try { json = JSON.parse(text); } catch { return { ok: false, errors: ['JSONとして読み取れませんでした。'] }; }
+  // 旧形式(formatVersion 1: 困りごとが0〜10で0が良い)は、1〜5(5が良い)へ変換して読み込む
+  if (json && typeof json === 'object' && (json as { formatVersion?: unknown }).formatVersion === 1) {
+    const j = json as { formatVersion: number; dailyEntries?: { problemRatings?: Record<string, number | null> }[]; problems?: { description?: string }[]; settings?: { schemaVersion?: number } };
+    j.formatVersion = 2;
+    for (const e of j.dailyEntries ?? []) e.problemRatings = convertLegacyRatings(e.problemRatings);
+    for (const p of j.problems ?? []) if (p.description) p.description = p.description.replace('（0＝よく眠れた）', '（5＝よく眠れた）');
+    if (j.settings) j.settings.schemaVersion = 2;
+  }
   const r = BackupSchema.safeParse(json);
   if (!r.success) {
     return { ok: false, errors: ['ぶひろぐのバックアップ形式ではないか、内容に不正な値があります。', ...r.error.issues.slice(0, 3).map((i) => `${i.path.join('.')}: ${i.message}`)] };
@@ -93,7 +102,7 @@ export function buildCsv(b: Backup): string {
   const aname = new Map(b.approaches.map((a) => [a.id, a.name]));
   const rows: (string | number)[][] = [['日付', '種類', '項目', '値', 'メモ']];
   for (const e of b.dailyEntries) {
-    for (const [id, r] of Object.entries(e.problemRatings)) rows.push([e.localDate, '困りごと(0-10)', pname.get(id) ?? id, r ?? '未入力', e.problemNotes[id] ?? '']);
+    for (const [id, r] of Object.entries(e.problemRatings)) rows.push([e.localDate, '困りごと(1-5, 5が良い)', pname.get(id) ?? id, r ?? '未入力', e.problemNotes[id] ?? '']);
     for (const [id, s] of Object.entries(e.approachStatuses)) rows.push([e.localDate, 'アプローチ', aname.get(id) ?? id, STATUS_JA[s], '']);
     if (e.sleepHours != null) rows.push([e.localDate, '生活', '睡眠時間(時間)', e.sleepHours, '']);
     if (e.bedtime) rows.push([e.localDate, '睡眠', '就寝時刻', e.bedtime, '']);

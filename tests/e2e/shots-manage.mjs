@@ -23,7 +23,7 @@ await p.getByLabel('新しいアプローチ').fill('寝る前1時間スマホ�
 await p.getByRole('button', { name: '追加' }).last().click();
 await p.screenshot({ path: `${out}/6-manage.png` });
 await p.getByRole('button', { name: '今日' }).click();
-await p.getByRole('radiogroup', { name: '睡眠の質の強さ' }).getByRole('radio', { name: '3', exact: true }).click();
+await p.getByRole('radiogroup', { name: '睡眠の質の調子' }).getByRole('radio', { name: '3', exact: true }).click();
 await p.getByRole('button', { name: /保存する/ }).click();
 await p.getByText('保存しました').waitFor();
 await p.getByRole('button', { name: '履歴' }).click();

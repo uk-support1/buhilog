@@ -9,6 +9,7 @@ export const MIN_PER_GROUP = 5;
 export const IMBALANCE_RATIO = 3;
 export const IMBALANCE_MIN_SHARE = 0.2;
 
+/** rating は 1〜5（5が良い） */
 export interface DayPoint { date: string; rating: number | null }
 export interface WeekAvg { from: string; to: string; mean: number | null; n: number }
 export interface Series {

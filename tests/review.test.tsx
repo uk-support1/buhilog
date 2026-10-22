@@ -20,7 +20,7 @@ describe('Review 画面', () => {
     const a = await repo.addApproach('ストレッチ', [p.id]);
     const t = toLocalDate();
     await repo.saveEntry({ localDate: t, problemRatings: { [p.id]: 3 }, problemNotes: {}, approachStatuses: { [a.id]: 'done' } });
-    await repo.saveEntry({ localDate: addDays(t, -1), problemRatings: { [p.id]: 6 }, problemNotes: {}, approachStatuses: { [a.id]: 'not_done' } });
+    await repo.saveEntry({ localDate: addDays(t, -1), problemRatings: { [p.id]: 2 }, problemNotes: {}, approachStatuses: { [a.id]: 'not_done' } });
     render(<Review repo={repo} />);
     expect(await screen.findByText(/参考値としてのみ表示/)).toBeInTheDocument();
     expect(screen.getByText(/あと: 「実施した日」あと4日/)).toBeInTheDocument();
