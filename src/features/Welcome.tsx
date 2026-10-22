@@ -22,7 +22,7 @@ export function Welcome({ repo, onDone }: { repo: Repo; onDone: () => void }) {
   if (step === 0) {
     return (
       <main className="card welcome">
-        <Buhio size={96} />
+        <Buhio size={132} pose="wave" />
         <h1>ぶひろぐ</h1>
         <p>困りごとと、試したことを記録して、自分なりの傾向を見つけるためのアプリです。</p>
         <ul>
@@ -37,6 +37,7 @@ export function Welcome({ repo, onDone }: { repo: Repo; onDone: () => void }) {
   }
   return (
     <main className="card">
+      <div className="center"><Buhio size={80} pose="think" /></div>
       <h1>気になっていることは？</h1>
       <p className="muted">1〜5個まで。あとから変更できます。後回しも可能です。</p>
       <div className="chips">
