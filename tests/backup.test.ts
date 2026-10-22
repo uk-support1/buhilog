@@ -17,7 +17,7 @@ async function seeded() {
       problemRatings: { [p.id]: i % 3 === 0 ? null : 1 + (i % 5), [p2.id]: 3 },
       problemNotes: { [p.id]: i === 1 ? '=HYPERLINK("x")\n改行,カンマ' : '' },
       approachStatuses: { [a.id]: i % 2 ? 'done' : 'not_done' },
-      note: i === 2 ? '"引用"' : undefined,
+      noteEvents: i === 2 ? '"引用"' : undefined,
     });
   }
   await repo.setProblemArchived(p2.id, true);

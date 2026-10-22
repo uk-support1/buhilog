@@ -18,6 +18,9 @@ export const ProblemSchema = z.object({
   /** 大きな括り（例: 睡眠・運動・困りごと）と、その中の小見出し */
   group: z.string().trim().max(MAX_NAME).optional(),
   section: z.string().trim().max(MAX_NAME).optional(),
+  /** メモ欄の呼び名（例: 理由）と、常に表示するか（既定は「メモ」として折りたたみ） */
+  noteLabel: z.string().trim().max(MAX_NAME).optional(),
+  noteAlways: z.boolean().optional(),
   order: z.number().int(),
   archivedAt: ts.optional(),
   createdAt: ts,
@@ -31,6 +34,10 @@ export const ApproachSchema = z.object({
   notes: z.string().max(MAX_TEXT).optional(),
   group: z.string().trim().max(MAX_NAME).optional(),
   section: z.string().trim().max(MAX_NAME).optional(),
+  /** 「実施した」を選んだときに量を入力できる項目（例: お酒=杯の選択、運動=回数） */
+  quantity: z
+    .object({ unit: z.string().trim().min(1).max(10), mode: z.enum(['select', 'number']), max: z.number().int().min(1).max(1000).optional() })
+    .optional(),
   linkedProblemIds: z.array(id),
   archivedAt: ts.optional(),
   createdAt: ts,
@@ -48,15 +55,21 @@ export const DailyEntrySchema = z.object({
   problemRatings: z.record(z.string(), problemRating.nullable()),
   problemNotes: z.record(z.string(), z.string().max(MAX_TEXT)),
   approachStatuses: z.record(z.string(), ApproachStatusSchema),
+  /** 実施した項目の量（杯・回数など）。approachId → 数 */
+  approachQuantities: z.record(z.string(), z.number().int().min(1).max(9999)).optional(),
   /** 合計睡眠時間（夜＋昼寝）。就寝・起床があれば自動計算した値を保存 */
   sleepHours: z.number().min(0).max(24).optional(),
   bedtime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
   wakeTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
   napHours: z.number().min(0).max(24).optional(),
-  /** 中途覚醒の回数。1〜2, 2〜3, …, 6〜7時間目の6区間。null=未入力 */
-  awakenings: z.array(z.number().int().min(0).max(30).nullable()).length(6).optional(),
+  /** 中途覚醒の回数。1〜2, 2〜3, 3〜4, 4〜5, 5〜6時間目の5区間。null=未入力 */
+  awakenings: z.array(z.number().int().min(0).max(30).nullable()).length(5).optional(),
+  /** ストレスは画面から外した（過去データの保持用） */
   stressRating: rating.optional(),
-  note: z.string().max(MAX_TEXT).optional(),
+  /** メモ: 出来事 / 気づき / その他 */
+  noteEvents: z.string().max(MAX_TEXT).optional(),
+  noteInsights: z.string().max(MAX_TEXT).optional(),
+  noteOther: z.string().max(MAX_TEXT).optional(),
   createdAt: ts,
   updatedAt: ts,
 });
@@ -76,7 +89,7 @@ export const AppSettingsSchema = z.object({
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: SCHEMA_VERSION,
   onboardingCompleted: false,

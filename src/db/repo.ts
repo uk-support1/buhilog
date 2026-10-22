@@ -23,7 +23,7 @@ export function createRepo(d: BuhiLogDB = db) {
       await d.problems.add(p);
       return p;
     },
-    async updateProblem(id: string, patch: Partial<Pick<Problem, 'name' | 'description' | 'order' | 'group' | 'section'>>) {
+    async updateProblem(id: string, patch: Partial<Pick<Problem, 'name' | 'description' | 'order' | 'group' | 'section' | 'noteLabel' | 'noteAlways'>>) {
       await d.transaction('rw', d.problems, async () => {
         const cur = await d.problems.get(id);
         if (!cur) throw new Error('困りごとが見つかりません');
@@ -65,7 +65,7 @@ export function createRepo(d: BuhiLogDB = db) {
       await d.approaches.add(a);
       return a;
     },
-    async updateApproach(id: string, patch: Partial<Pick<Approach, 'name' | 'notes' | 'linkedProblemIds' | 'group' | 'section'>>) {
+    async updateApproach(id: string, patch: Partial<Pick<Approach, 'name' | 'notes' | 'linkedProblemIds' | 'group' | 'section' | 'quantity'>>) {
       await d.transaction('rw', d.approaches, async () => {
         const cur = await d.approaches.get(id);
         if (!cur) throw new Error('アプローチが見つかりません');

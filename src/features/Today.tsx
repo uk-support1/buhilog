@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { formatJa, isValidLocalDate, toLocalDate } from '../domain/date';
 import { buildGroups, hasNamedGroups } from '../domain/groups';
-import { AWAKE_COUNTED, AWAKE_LABELS, awakeningTotal, totalSleepHours, nightHours } from '../domain/sleep';
+import { AWAKE_LABELS, DEFAULT_BEDTIME, DEFAULT_WAKETIME, awakeningTotal, totalSleepHours, nightHours } from '../domain/sleep';
 import type { Approach, ApproachStatus, Problem } from '../domain/types';
 import { Buhio } from '../ui/Buhio';
 import { PROBLEM_SCALE_LABEL } from '../domain/scale';
-import { RatingInput } from '../ui/RatingInput';
 import { ScoreInput } from '../ui/ScoreInput';
+import { TimeSelect } from '../ui/TimeSelect';
 
 interface Form {
   ratings: Record<string, number | null>;
@@ -18,10 +18,19 @@ interface Form {
   wake: string;
   nap: string;
   awake: string[];
+  /** 実施した項目の量（杯・回数）。approachId → 入力文字 */
+  quantities: Record<string, string>;
+  /** ストレスは画面から外したが、過去データは保持する */
   stress: number | null;
-  note: string;
+  noteEvents: string;
+  noteInsights: string;
+  noteOther: string;
 }
-const emptyForm = (): Form => ({ ratings: {}, notes: {}, statuses: {}, sleep: '', bed: '', wake: '', nap: '', awake: Array(6).fill(''), stress: null, note: '' });
+// 就寝・起床の初期値は 23:00 / 7:00（そのまま保存すると、この時刻で記録される）
+const emptyForm = (): Form => ({
+  ratings: {}, notes: {}, statuses: {}, sleep: '', bed: DEFAULT_BEDTIME, wake: DEFAULT_WAKETIME, nap: '',
+  awake: Array(5).fill(''), quantities: {}, stress: null, noteEvents: '', noteInsights: '', noteOther: '',
+});
 
 const STATUS_LABEL: Record<ApproachStatus, string> = { done: '実施した', not_done: '実施しなかった', unknown: '未回答' };
 const MEMO_TAB = '__memo__';
@@ -60,14 +69,17 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
               bed: e.bedtime ?? '',
               wake: e.wakeTime ?? '',
               nap: e.napHours != null ? String(e.napHours) : '',
-              awake: Array.from({ length: 6 }, (_, i) => (e.awakenings?.[i] != null ? String(e.awakenings[i]) : '')),
+              awake: Array.from({ length: 5 }, (_, i) => (e.awakenings?.[i] != null ? String(e.awakenings[i]) : '')),
+              quantities: Object.fromEntries(Object.entries(e.approachQuantities ?? {}).map(([k, v]) => [k, String(v)])),
               stress: e.stressRating ?? null,
-              note: e.note ?? '',
+              noteEvents: e.noteEvents ?? '',
+              noteInsights: e.noteInsights ?? '',
+              noteOther: e.noteOther ?? '',
             }
           : emptyForm(),
       );
       setDirty(false);
-      setDetail(!!e && (Object.values(e.problemNotes).some(Boolean) || e.sleepHours != null || e.bedtime != null || e.wakeTime != null || e.napHours != null || !!e.awakenings || e.stressRating != null || !!e.note));
+      setDetail(!!e && (Object.values(e.problemNotes).some(Boolean) || e.sleepHours != null || e.bedtime != null || e.wakeTime != null || e.napHours != null || !!e.awakenings || e.stressRating != null || !!e.noteEvents || !!e.noteInsights || !!e.noteOther));
       setMsg('');
       setErr('');
     })();
@@ -102,19 +114,31 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
     const autoSleep = totalSleepHours(form.bed || undefined, form.wake || undefined, napNum);
     const sleepNum = autoSleep ?? manualSleep;
     const awakenings = form.awake.some((x) => x !== '') ? form.awake.map((x) => (x === '' ? null : Number(x))) : undefined;
+    // 「実施した」項目の量だけを保存する（実施していない項目の量は保存しない）
+    const quantities: Record<string, number> = {};
+    for (const a of approaches) {
+      const raw = (form.quantities[a.id] ?? '').trim();
+      if (!a.quantity || form.statuses[a.id] !== 'done' || raw === '') continue;
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 1 || n > 9999) { setErr(`「${a.name}」の量は、1以上の整数で入力してください。`); return; }
+      quantities[a.id] = n;
+    }
     try {
       await repo.saveEntry({
         localDate: date,
         problemRatings: form.ratings,
         problemNotes: Object.fromEntries(Object.entries(form.notes).filter(([, v]) => v.trim() !== '')),
         approachStatuses: form.statuses,
+        approachQuantities: Object.keys(quantities).length ? quantities : undefined,
         sleepHours: sleepNum,
         bedtime: form.bed || undefined,
         wakeTime: form.wake || undefined,
         napHours: napNum,
         awakenings,
         stressRating: form.stress ?? undefined,
-        note: form.note.trim() === '' ? undefined : form.note,
+        noteEvents: form.noteEvents.trim() === '' ? undefined : form.noteEvents,
+        noteInsights: form.noteInsights.trim() === '' ? undefined : form.noteInsights,
+        noteOther: form.noteOther.trim() === '' ? undefined : form.noteOther,
       });
       setExisting(true);
       setDirty(false);
@@ -134,7 +158,18 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
         value={form.ratings[p.id]}
         onChange={(v) => edit((f) => ({ ...f, ratings: { ...f.ratings, [p.id]: v } }))}
       />
-      {(detail || grouped) && (
+      {p.noteAlways ? (
+        <label className="field">
+          {p.noteLabel ?? 'メモ'}
+          <textarea
+            aria-label={`${p.name}の${p.noteLabel ?? 'メモ'}`}
+            rows={2}
+            maxLength={2000}
+            value={form.notes[p.id] ?? ''}
+            onChange={(e) => edit((f) => ({ ...f, notes: { ...f.notes, [p.id]: e.target.value } }))}
+          />
+        </label>
+      ) : (detail || grouped) && (
         <details open={!!form.notes[p.id]}>
           <summary className="small">メモ</summary>
           <textarea
@@ -166,6 +201,32 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
           </button>
         ))}
       </div>
+      {a.quantity && form.statuses[a.id] === 'done' && (
+        <label className="qty">
+          {a.quantity.unit === '回' ? '回数' : `量（${a.quantity.unit}）`}
+          {a.quantity.mode === 'select' ? (
+            <select
+              aria-label={`${a.name}の量`}
+              value={form.quantities[a.id] ?? ''}
+              onChange={(e) => edit((f) => ({ ...f, quantities: { ...f.quantities, [a.id]: e.target.value } }))}
+            >
+              <option value="">選ぶ</option>
+              {Array.from({ length: a.quantity.max ?? 10 }, (_, i) => i + 1).map((n) => <option key={n} value={String(n)}>{n}{a.quantity!.unit}</option>)}
+            </select>
+          ) : (
+            <span className="qty-num">
+              <input
+                inputMode="numeric"
+                aria-label={`${a.name}の回数`}
+                placeholder="例: 30"
+                value={form.quantities[a.id] ?? ''}
+                onChange={(e) => edit((f) => ({ ...f, quantities: { ...f.quantities, [a.id]: e.target.value.replace(/[^0-9]/g, '') } }))}
+              />
+              {a.quantity.unit}
+            </span>
+          )}
+        </label>
+      )}
     </div>
   );
 
@@ -180,14 +241,8 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
     <section className="card" aria-label="睡眠">
       <h2>睡眠</h2>
       <div className="two">
-        <label className="field">
-          就寝時刻
-          <input type="time" value={form.bed} onChange={(e) => edit((f) => ({ ...f, bed: e.target.value }))} />
-        </label>
-        <label className="field">
-          起床時刻
-          <input type="time" value={form.wake} onChange={(e) => edit((f) => ({ ...f, wake: e.target.value }))} />
-        </label>
+        <TimeSelect label="就寝時刻" value={form.bed} onChange={(v) => edit((f) => ({ ...f, bed: v }))} />
+        <TimeSelect label="起床時刻" value={form.wake} onChange={(v) => edit((f) => ({ ...f, wake: v }))} />
       </div>
       <label className="field">
         昼寝（時間）
@@ -206,10 +261,10 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
       )}
       <fieldset>
         <legend>中途覚醒の回数（眠ってからの時間ごと）</legend>
-        <div className="awake-grid">
+        <div className="awake-list">
           {AWAKE_LABELS.map((label, i) => (
-            <label key={label} className="field">
-              {label}{i >= AWAKE_COUNTED ? '（合計に含めない）' : ''}
+            <label key={label} className="awake-row">
+              <span>{label}</span>
               <select value={form.awake[i]} onChange={(e) => edit((f) => ({ ...f, awake: f.awake.map((x, j) => (j === i ? e.target.value : x)) }))}>
                 <option value="">未入力</option>
                 {Array.from({ length: 10 }, (_, n) => <option key={n} value={String(n)}>{n}回</option>)}
@@ -217,7 +272,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
             </label>
           ))}
         </div>
-        <button type="button" onClick={() => edit((f) => ({ ...f, awake: Array(6).fill('0') }))}>中途覚醒なし（すべて0回）</button>
+        <button type="button" onClick={() => edit((f) => ({ ...f, awake: Array(5).fill('0') }))}>中途覚醒なし（すべて0回）</button>
         <p className="total" role="status">合計（1〜6時間目）： <strong>{awakeSum == null ? '未入力' : `${awakeSum}回`}</strong></p>
       </fieldset>
     </section>
@@ -227,14 +282,18 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
 
   const bodySection = (
     <section className="card">
-      <h2>{sleepInTab ? 'ストレスとメモ（任意）' : '睡眠とメモ（任意）'}</h2>
-      <div className="field">
-        ストレス（0〜10）
-        <RatingInput label="ストレス" value={form.stress} onChange={(v) => edit((f) => ({ ...f, stress: v }))} />
-      </div>
+      <h2>メモ（任意）</h2>
       <label className="field">
-        自由メモ
-        <textarea rows={grouped ? 8 : 3} maxLength={2000} value={form.note} onChange={(e) => edit((f) => ({ ...f, note: e.target.value }))} />
+        出来事
+        <textarea rows={grouped ? 5 : 3} maxLength={2000} value={form.noteEvents} onChange={(e) => edit((f) => ({ ...f, noteEvents: e.target.value }))} />
+      </label>
+      <label className="field">
+        気づき
+        <textarea rows={grouped ? 4 : 3} maxLength={2000} value={form.noteInsights} onChange={(e) => edit((f) => ({ ...f, noteInsights: e.target.value }))} />
+      </label>
+      <label className="field">
+        その他
+        <textarea rows={grouped ? 4 : 3} maxLength={2000} value={form.noteOther} onChange={(e) => edit((f) => ({ ...f, noteOther: e.target.value }))} />
       </label>
       {!grouped && <button type="button" onClick={() => setDetail(false)}>くわしい入力をたたむ</button>}
     </section>
@@ -321,7 +380,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
           )}
           {!detail && (
             <button type="button" className="more" onClick={() => setDetail(true)}>
-              ＋ くわしく入力する（メモ・睡眠・ストレス）
+              ＋ くわしく入力する（睡眠・メモ）
             </button>
           )}
           {detail && bodyWithSleep}
