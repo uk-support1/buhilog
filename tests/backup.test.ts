@@ -98,3 +98,25 @@ describe('バックアップ促し', () => {
     expect(backupDue(true, { ...DEFAULT_SETTINGS, lastBackupAt: 100 * day }, 114 * day)).toBe(true);
   });
 });
+
+describe('バックアップのお知らせ（追加の確認）', () => {
+  const day = 86_400_000;
+  it('「あとで」の期間中は出さず、過ぎれば再び出す', () => {
+    const s = { ...DEFAULT_SETTINGS, backupSnoozedUntil: 110 * day };
+    expect(backupDue(true, s, 105 * day)).toBe(false);
+    expect(backupDue(true, s, 111 * day)).toBe(true);
+  });
+  it('復元しても「最後のバックアップ日」を失わず、ファイルの作成日時を引き継ぐ', async () => {
+    const { repo } = await seeded();
+    const b = await buildBackup(repo);
+    const stamp = '2026-10-22T10:00:00Z';
+    const r = parseBackup(JSON.stringify({ ...b, exportedAt: stamp, settings: { ...b.settings, lastBackupAt: undefined } }));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const db2 = new BuhiLogDB(`b${n++}`);
+    await restoreBackup(db2, r.backup);
+    expect((await createRepo(db2).getSettings()).lastBackupAt).toBe(Date.parse(stamp));
+    // 復元直後は「期限切れ」ではない
+    expect(backupDue(true, await createRepo(db2).getSettings(), Date.parse(stamp) + day)).toBe(false);
+  });
+});

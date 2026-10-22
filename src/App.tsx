@@ -33,7 +33,7 @@ export function App() {
       <header><Buhio size={48} pose="jumping" /><span>ぶひろぐ</span></header>
       <main>
         <UpdateBanner />
-        {tab !== 'settings' && <BackupReminder repo={repo} onGo={() => setTab('settings')} />}
+        {tab !== 'settings' && <BackupReminder key={`${tab}-${sub}`} repo={repo} onGo={() => setTab('settings')} />}
         {tab === 'record' && (
           <>
             <nav className="subnav" aria-label="記録メニュー">
