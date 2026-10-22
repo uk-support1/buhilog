@@ -7,7 +7,8 @@ const W = 320, H = 170, L = 26, R = 8, T = 10, B = 34;
 export function TrendChart({ series, name }: { series: Series; name: string }) {
   const n = series.days.length;
   const x = (i: number) => L + (n === 1 ? 0 : (i * (W - L - R)) / (n - 1));
-  const y = (v: number) => T + ((10 - v) * (H - T - B)) / 10;
+  // 縦軸は 1〜5。上ほど調子が良い（5＝いちばん良い）
+  const y = (v: number) => T + ((5 - v) * (H - T - B)) / 4;
   const segs: string[] = [];
   let cur: string[] = [];
   series.days.forEach((p, i) => {
@@ -20,7 +21,7 @@ export function TrendChart({ series, name }: { series: Series; name: string }) {
   return (
     <figure className="chart">
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${name}の推移。${n}日間のうち${series.recorded}日分の記録、${series.missing}日は未記録。`}>
-        {[0, 5, 10].map((v) => (
+        {[1, 3, 5].map((v) => (
           <g key={v}>
             <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="var(--line)" />
             <text x={L - 4} y={y(v) + 4} textAnchor="end" fontSize="10" fill="var(--muted)">{v}</text>
@@ -37,7 +38,7 @@ export function TrendChart({ series, name }: { series: Series; name: string }) {
         <text x={L} y={H - 6} fontSize="10" fill="var(--muted)">{formatJa(first)}</text>
         <text x={W - R} y={H - 6} fontSize="10" textAnchor="end" fill="var(--muted)">{formatJa(last)}</text>
       </svg>
-      <figcaption className="muted small">● 記録あり　× 未記録（線はつなぎません）。0＝なし、10＝最もつらい。</figcaption>
+      <figcaption className="muted small">● 記録あり　× 未記録（線はつなぎません）。上ほど調子が良い（5＝いちばん良い、1＝調子が悪い）。</figcaption>
       <details>
         <summary>数値の一覧</summary>
         <table>

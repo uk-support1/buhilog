@@ -39,7 +39,7 @@ export function describeComparison(c: Comparison, approach: string): { headline:
     };
   }
   const d = c.difference!;
-  lines.push(`差（実施した日 − 実施しなかった日）: ${d > 0 ? '+' : ''}${f1(d)}ポイント。数値が小さいほど症状が軽い記録です。`);
+  lines.push(`差（実施した日 − 実施しなかった日）: ${d > 0 ? '+' : ''}${f1(d)}ポイント。数値が大きいほど調子が良い（5が最良）記録です。`);
   if (c.sdDone != null && c.sdNotDone != null) lines.push(`ばらつき（標準偏差）: 実施 ${f1(c.sdDone)}、非実施 ${f1(c.sdNotDone)}。`);
   return { headline: '観察された平均の差（探索的な表示）', lines, caution };
 }

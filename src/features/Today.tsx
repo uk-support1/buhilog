@@ -5,7 +5,9 @@ import { buildGroups, hasNamedGroups } from '../domain/groups';
 import { AWAKE_COUNTED, AWAKE_LABELS, awakeningTotal, totalSleepHours, nightHours } from '../domain/sleep';
 import type { Approach, ApproachStatus, Problem } from '../domain/types';
 import { Buhio } from '../ui/Buhio';
+import { PROBLEM_SCALE_LABEL } from '../domain/scale';
 import { RatingInput } from '../ui/RatingInput';
+import { ScoreInput } from '../ui/ScoreInput';
 
 interface Form {
   ratings: Record<string, number | null>;
@@ -127,8 +129,8 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
     <div className="item" aria-label={p.name} key={p.id}>
       <H>{p.name}</H>
       {p.description && <p className="muted small">{p.description}</p>}
-      <RatingInput
-        label={`${p.name}の強さ`}
+      <ScoreInput
+        label={`${p.name}の調子`}
         value={form.ratings[p.id]}
         onChange={(v) => edit((f) => ({ ...f, ratings: { ...f.ratings, [p.id]: v } }))}
       />
@@ -294,7 +296,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
                   ...g.sections.map((s) => (
                     <section className="card" key={s.title ?? '_'} aria-label={s.title ?? g.name}>
                       <h2>{s.title ?? g.name}</h2>
-                      {s.problems.length > 0 && <p className="muted small">0＝なし／良い 〜 10＝最もつらい</p>}
+                      {s.problems.length > 0 && <p className="muted small">{PROBLEM_SCALE_LABEL}</p>}
                       {s.problems.map((p) => problemBlock(p, 'h3'))}
                       {s.approaches.length > 0 && <p className="muted small">「実施しなかった」と「未回答」は別のものとして扱います。</p>}
                       {s.approaches.map(approachBlock)}
@@ -307,6 +309,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
           {problems.map((p) => (
             <section className="card" key={p.id}>
               {problemBlock(p, 'h2')}
+              <p className="muted small">{PROBLEM_SCALE_LABEL}</p>
             </section>
           ))}
           {approaches.length > 0 && (

@@ -14,7 +14,7 @@ async function seeded() {
   for (let i = 1; i <= 12; i++) {
     await repo.saveEntry({
       localDate: `2026-05-${String(i).padStart(2, '0')}`,
-      problemRatings: { [p.id]: i % 3 === 0 ? null : i % 11, [p2.id]: 0 },
+      problemRatings: { [p.id]: i % 3 === 0 ? null : 1 + (i % 5), [p2.id]: 3 },
       problemNotes: { [p.id]: i === 1 ? '=HYPERLINK("x")\n改行,カンマ' : '' },
       approachStatuses: { [a.id]: i % 2 ? 'done' : 'not_done' },
       note: i === 2 ? '"引用"' : undefined,
@@ -78,12 +78,12 @@ describe('CSV', () => {
     expect(csvCell('a"b,c\nd')).toBe(`"a""b,c\nd"`);
     expect(csvCell(0)).toBe('"0"');
   });
-  it('未入力と0を区別して出力', async () => {
+  it('未入力と点数を区別して出力', async () => {
     const { repo } = await seeded();
     const csv = buildCsv(await buildBackup(repo));
     expect(csv.startsWith('﻿"日付"')).toBe(true);
     expect(csv).toContain('"未入力"');
-    expect(csv).toContain('"痛み","1"');
+    expect(csv).toContain('"痛み","2"');
     expect(csv).toContain(`"'=HYPERLINK`);
     expect(csv).toContain('"実施しなかった"');
   });

@@ -12,7 +12,7 @@ await p.screenshot({ path: `${out}/1-welcome.png` });
 await p.getByRole('button', { name: 'はじめる' }).click();
 await p.getByRole('button', { name: '＋睡眠' }).click();
 await p.getByRole('button', { name: '記録をはじめる' }).click();
-await p.getByRole('radiogroup', { name: '睡眠の強さ' }).getByRole('radio', { name: '4', exact: true }).click();
+await p.getByRole('radiogroup', { name: '睡眠の調子' }).getByRole('radio', { name: '4', exact: true }).click();
 await p.screenshot({ path: `${out}/2-today.png` });
 await p.getByRole('button', { name: /保存する/ }).click();
 await p.getByText('保存しました').waitFor();

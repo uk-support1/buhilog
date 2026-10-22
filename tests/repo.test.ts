@@ -6,13 +6,13 @@ const fresh = () => { const db = new BuhiLogDB(`t${n++}`); return { db, repo: cr
 const base = { problemRatings: {}, problemNotes: {}, approachStatuses: {} };
 
 describe('repo', () => {
-  it('未入力(null)と0を区別して保存する', async () => {
+  it('未入力(null)と点数を区別して保存する', async () => {
     const { repo } = fresh();
     const p1 = await repo.addProblem('痛み');
     const p2 = await repo.addProblem('不眠');
-    await repo.saveEntry({ ...base, localDate: '2026-05-01', problemRatings: { [p1.id]: 0, [p2.id]: null } });
+    await repo.saveEntry({ ...base, localDate: '2026-05-01', problemRatings: { [p1.id]: 5, [p2.id]: null } });
     const e = await repo.getEntry('2026-05-01');
-    expect(e?.problemRatings[p1.id]).toBe(0);
+    expect(e?.problemRatings[p1.id]).toBe(5);
     expect(e?.problemRatings[p2.id]).toBeNull();
   });
 
@@ -34,7 +34,8 @@ describe('repo', () => {
 
   it('範囲外・不正値は拒否する', async () => {
     const { repo } = fresh();
-    await expect(repo.saveEntry({ ...base, localDate: '2026-05-01', problemRatings: { x: 11 } })).rejects.toThrow();
+    await expect(repo.saveEntry({ ...base, localDate: '2026-05-01', problemRatings: { x: 6 } })).rejects.toThrow();
+    await expect(repo.saveEntry({ ...base, localDate: '2026-05-01', problemRatings: { x: 0 } })).rejects.toThrow(); // 困りごとは1〜5
     await expect(repo.saveEntry({ ...base, localDate: '2026-05-01', problemRatings: { x: 2.5 } })).rejects.toThrow();
     await expect(repo.saveEntry({ ...base, localDate: '2026-02-30' })).rejects.toThrow();
     await expect(repo.saveEntry({ ...base, localDate: '2026-05-01', sleepHours: 30 })).rejects.toThrow();

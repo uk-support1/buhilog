@@ -15,10 +15,10 @@ describe('履歴', () => {
     await repo.saveSettings({ groupOrder: ['睡眠', '朝要因', '困りごと'] });
     const today = toLocalDate();
     await repo.saveEntry({
-      localDate: today, problemRatings: { [p1.id]: 0, [p2.id]: 3 }, problemNotes: {}, approachStatuses: { [a1.id]: 'done' },
+      localDate: today, problemRatings: { [p1.id]: 5, [p2.id]: 3 }, problemNotes: {}, approachStatuses: { [a1.id]: 'done' },
       bedtime: '23:00', wakeTime: '06:00', awakenings: [0, 0, 0, 0, 0, 0], note: 'メモ',
     });
-    await repo.saveEntry({ localDate: addDays(today, -20), problemRatings: { [p3.id]: 6 }, problemNotes: {}, approachStatuses: {} });
+    await repo.saveEntry({ localDate: addDays(today, -20), problemRatings: { [p3.id]: 2 }, problemNotes: {}, approachStatuses: {} });
     const user = userEvent.setup();
     render(<History repo={repo} onEdit={() => {}} />);
     expect(await screen.findByText('睡眠 4/4')).toBeInTheDocument();
