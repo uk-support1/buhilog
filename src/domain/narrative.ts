@@ -16,9 +16,10 @@ const f1 = (n: number) => n.toFixed(1);
 
 type Kind =
   | 'hours' | 'bed' | 'wake' | 'awake' | 'nap'
-  | 'alcohol' | 'phone' | 'morning' | 'exercise' | 'multitask' | 'social' | 'helpful' | 'generic';
+  | 'alcohol' | 'phone' | 'morning' | 'exercise' | 'multitask' | 'social' | 'helpful' | 'sign' | 'generic';
 
 function kindOf(c: Candidate): Kind {
+  if (c.loop) return 'sign';
   switch (c.key) {
     case 's:hours': return 'hours';
     case 's:bed': return 'bed';
@@ -89,6 +90,10 @@ const REASONS: Record<Kind, { plus: string[]; minus: string[] }> = {
     plus: ['「誰かの役に立てた」という実感が、自信や満足感につながっている可能性があります。', '調子が良い日ほど、人のために動ける、という' + REVERSE],
     minus: ['人のために頑張りすぎて、疲れがたまっている可能性があります。', '調子が悪い日に、無理に人の役に立とうとしている可能性もあります。'],
   },
+  sign: {
+    plus: ['姿勢や表情は、気分と互いに影響し合うことが知られています。整えることが、気持ちを引き上げるきっかけになっている可能性があります。', '一方で、気分が良い日だから自然と整っている、という逆の関係もありえます。生き生きとした「好循環」の入口として、使える可能性があります。'],
+    minus: ['意識しすぎて、かえって力が入ってしまっている可能性があります。', '調子が悪い日に、気持ちを立て直そうと意識している、という逆の関係の可能性もあります。'],
+  },
   generic: {
     plus: ['この行動が、調子を支えている可能性があります。', '調子が良い日に、その行動をしやすい、という' + REVERSE],
     minus: ['この行動が、負担になっている可能性があります。', '調子が悪い日に、対処としてその行動をしている、という' + REVERSE],
@@ -107,7 +112,7 @@ export interface Narrative {
   note: string;
 }
 
-function gapWords(d: number): string {
+export function gapWords(d: number): string {
   const a = Math.abs(d);
   if (a < 0.3) return 'ほとんど差はありません';
   if (a < 0.7) return '平均でおよそ半段階の差';
@@ -117,6 +122,11 @@ function gapWords(d: number): string {
 
 function tipFor(c: Candidate, kind: Kind): string {
   const two = '2週間ほど、調子の変化を見てみましょう。';
+  if (kind === 'sign') {
+    return c.positive
+      ? '調子が重い日こそ、背筋と口角を整えることを「最初の一手」にして、そのあとの調子を記録で確かめてみましょう。'
+      : '力まずに、1日のうち数回だけ意識する形にして、' + two;
+  }
   if (c.kind === 'sleep') {
     // 睡眠の項目では、睡眠を減らす提案はしない
     if (kind === 'awake') return '寝る前の習慣（画面・お酒・カフェインなど）を見直して、覚醒の回数がどう変わるかを、' + two;
@@ -135,7 +145,7 @@ function tipFor(c: Candidate, kind: Kind): string {
 export function buildNarrative(problemName: string, c: Candidate): Narrative {
   const kind = kindOf(c);
   const good = c.positive ? '良い' : '悪い';
-  const subject = c.kind === 'approach' ? `「${c.name}」を実施した日は` : `${c.name}が${c.more}日ほど`;
+  const subject = c.kind === 'signal' ? `「${c.name}」が良い状態の日ほど` : c.kind === 'approach' ? `「${c.name}」を実施した日は` : `${c.name}が${c.more}日ほど`;
   const target = `「${problemName}」の調子`;
   const headline = c.strength === 'tiny'
     ? `${subject}、${target}にごくわずかな差が見えるだけです`
@@ -143,7 +153,9 @@ export function buildNarrative(problemName: string, c: Candidate): Narrative {
 
   const d = c.detail;
   const numbers: string[] = [];
-  if (d.type === 'binary') {
+  if (c.kind === 'signal' && d.type === 'numeric') {
+    numbers.push(`「${c.name}」が高め（${Math.round(d.cut * 10) / 10}より上）の日の調子の平均は ${f1(d.meanHigh)}（${d.nHigh}日）、そうでない日は ${f1(d.meanLow)}（${d.nLow}日）。${gapWords(d.meanHigh - d.meanLow)}です。`);
+  } else if (d.type === 'binary') {
     numbers.push(`調子の平均は、実施した日が ${f1(d.meanA)}（${d.nA}日）、しなかった日が ${f1(d.meanB)}（${d.nB}日）。${gapWords(d.meanA - d.meanB)}です。`);
   } else {
     numbers.push(`${c.name}が${c.more}側の日の調子の平均は ${f1(d.meanHigh)}（${d.nHigh}日）、そうでない日は ${f1(d.meanLow)}（${d.nLow}日）。${gapWords(d.meanHigh - d.meanLow)}です。`);

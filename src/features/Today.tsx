@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { formatJa, isValidLocalDate, toLocalDate } from '../domain/date';
 import { buildGroups, hasNamedGroups } from '../domain/groups';
+import { pairedApproachIds, SIGN_GROUP, SIGN_INTRO } from '../domain/signs';
 import { AWAKE_LABELS, DEFAULT_BEDTIME, DEFAULT_WAKETIME, awakeningTotal, totalSleepHours, nightHours } from '../domain/sleep';
 import type { Approach, ApproachStatus, Problem } from '../domain/types';
 import { Buhio } from '../ui/Buhio';
@@ -33,6 +34,7 @@ const emptyForm = (): Form => ({
 });
 
 const STATUS_LABEL: Record<ApproachStatus, string> = { done: '実施した', not_done: '実施しなかった', unknown: '未回答' };
+const PRACTICE_LABEL: Record<ApproachStatus, string> = { done: '意識した', not_done: '意識しなかった', unknown: '未回答' };
 const MEMO_TAB = '__memo__';
 
 export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string }) {
@@ -88,6 +90,9 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
 
   const groups = useMemo(() => buildGroups(problems, approaches, groupOrder), [problems, approaches, groupOrder]);
   const grouped = hasNamedGroups(groups);
+  // 「いきいきサイン」の「意識した」項目は、サインの中に入れて表示する（試したことの一覧には出さない）
+  const paired = useMemo(() => pairedApproachIds(problems), [problems]);
+  const approachOf = (id?: string) => (id ? approaches.find((a) => a.id === id) : undefined);
   const activeTab = grouped ? (tab === MEMO_TAB || groups.some((g) => g.name === tab) ? tab : groups[0].name) : '';
 
   const edit = (f: (x: Form) => Form) => { setForm(f); setDirty(true); setMsg(''); };
@@ -158,6 +163,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
         value={form.ratings[p.id]}
         onChange={(v) => edit((f) => ({ ...f, ratings: { ...f.ratings, [p.id]: v } }))}
       />
+      {approachOf(p.pairedApproachId) && practiceRow(approachOf(p.pairedApproachId)!)}
       {p.noteAlways ? (
         <label className="field">
           {p.noteLabel ?? 'メモ'}
@@ -181,6 +187,26 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
           />
         </details>
       )}
+    </div>
+  );
+
+  const practiceRow = (a: Approach) => (
+    <div role="radiogroup" aria-label={a.name} className="practice">
+      <span className="plabel">{a.name}？</span>
+      <div className="seg">
+        {(['done', 'not_done', 'unknown'] as ApproachStatus[]).map((s) => (
+          <button
+            key={s}
+            type="button"
+            role="radio"
+            aria-checked={(form.statuses[a.id] ?? 'unknown') === s}
+            className={(form.statuses[a.id] ?? 'unknown') === s ? 'sel' : ''}
+            onClick={() => edit((f) => ({ ...f, statuses: { ...f.statuses, [a.id]: s } }))}
+          >
+            {PRACTICE_LABEL[s]}
+          </button>
+        ))}
+      </div>
     </div>
   );
 
@@ -355,10 +381,11 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
                   ...g.sections.map((s) => (
                     <section className="card" key={s.title ?? '_'} aria-label={s.title ?? g.name}>
                       <h2>{s.title ?? g.name}</h2>
+                      {g.name === SIGN_GROUP && <p className="muted small">{SIGN_INTRO}</p>}
                       {s.problems.length > 0 && <p className="muted small">{PROBLEM_SCALE_LABEL}</p>}
                       {s.problems.map((p) => problemBlock(p, 'h3'))}
-                      {s.approaches.length > 0 && <p className="muted small">「実施しなかった」と「未回答」は別のものとして扱います。</p>}
-                      {s.approaches.map(approachBlock)}
+                      {s.approaches.some((a) => !paired.has(a.id)) && <p className="muted small">「実施しなかった」と「未回答」は別のものとして扱います。</p>}
+                      {s.approaches.filter((a) => !paired.has(a.id)).map(approachBlock)}
                     </section>
                   )),
                 ])}
@@ -371,11 +398,11 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
               <p className="muted small">{PROBLEM_SCALE_LABEL}</p>
             </section>
           ))}
-          {approaches.length > 0 && (
+          {approaches.some((a) => !paired.has(a.id)) && (
             <section className="card">
               <h2>試したこと</h2>
               <p className="muted small">「実施しなかった」と「未回答」は別のものとして扱います。</p>
-              {approaches.map(approachBlock)}
+              {approaches.filter((a) => !paired.has(a.id)).map(approachBlock)}
             </section>
           )}
           {!detail && (

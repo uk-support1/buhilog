@@ -21,6 +21,8 @@ export const ProblemSchema = z.object({
   /** メモ欄の呼び名（例: 理由）と、常に表示するか（既定は「メモ」として折りたたみ） */
   noteLabel: z.string().trim().max(MAX_NAME).optional(),
   noteAlways: z.boolean().optional(),
+  /** 「いきいきサイン」: この項目（自然にできていた度合い）と対になる「意識した」項目（試したこと）のID */
+  pairedApproachId: z.string().min(1).max(64).optional(),
   order: z.number().int(),
   archivedAt: ts.optional(),
   createdAt: ts,
@@ -89,7 +91,7 @@ export const AppSettingsSchema = z.object({
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: SCHEMA_VERSION,
   onboardingCompleted: false,

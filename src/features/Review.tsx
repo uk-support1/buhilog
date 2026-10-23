@@ -3,7 +3,9 @@ import type { Repo } from '../db/repo';
 import { buildSeries, compareApproach, PERIODS, type Period } from '../domain/analytics';
 import { toLocalDate } from '../domain/date';
 import { buildGroups, hasNamedGroups } from '../domain/groups';
-import { rankFactors, STRENGTH_LABEL, type Candidate } from '../domain/correlation';
+import { rankFactors, STRENGTH_LABEL, type Candidate, type SignalDef } from '../domain/correlation';
+import { summarizeSign, signStory } from '../domain/signSummary';
+import { SIGN_GROUP } from '../domain/signs';
 import { buildNarrative, EVIDENCE_LABEL } from '../domain/narrative';
 import { describeComparison } from '../domain/text';
 import type { Approach, DailyEntry, Problem } from '../domain/types';
@@ -38,7 +40,18 @@ export function Review({ repo }: { repo: Repo }) {
   const series = useMemo(() => (pid ? buildSeries(entries, pid, end, period) : null), [entries, pid, end, period]);
   const problem = problems.find((p) => p.id === pid);
   // 要因の候補（試したこと・睡眠・量）。試したことの「対象の困りごと」の設定にかかわらず、記録のある要因すべてを比べる
-  const rank = useMemo(() => (pid ? rankFactors(entries, approaches, pid, end, period) : null), [entries, approaches, pid, end, period]);
+  const signals: SignalDef[] = useMemo(
+    () => problems.filter((p) => p.pairedApproachId && !p.archivedAt).map((p) => ({ id: p.id, name: p.name, approachId: p.pairedApproachId })),
+    [problems],
+  );
+  const rank = useMemo(() => (pid ? rankFactors(entries, approaches, pid, end, period, signals) : null), [entries, approaches, pid, end, period, signals]);
+  const signSummaries = useMemo(
+    () => problems.flatMap((p) => {
+      const a = approaches.find((x) => x.id === p.pairedApproachId);
+      return p.pairedApproachId && a && !p.archivedAt ? [summarizeSign(entries, p, a, problem, end, period)] : [];
+    }),
+    [problems, approaches, entries, problem, end, period],
+  );
   useEffect(() => { setOpenKey(null); }, [pid, choice]);
   const optionGroups = useMemo(() => {
     const gs = buildGroups(problems, [], groupOrder).filter((g) => g.sections.some((s) => s.problems.length));
@@ -94,6 +107,23 @@ export function Review({ repo }: { repo: Repo }) {
         </section>
       )}
 
+      {problem && signSummaries.length > 0 && (
+        <section className="card signs" aria-labelledby="sign-h">
+          <h2 id="sign-h">{SIGN_GROUP}</h2>
+          <p className="muted small">背筋・口角は、生き生きしている「結果」でもあり、整えると気分が上がる「きっかけ」にもなります。原因と結果が混ざらないよう、2つの面を分けて見ています。</p>
+          {signSummaries.map((s) => {
+            const story = signStory(s, s.sign.id === problem.id ? undefined : problem.name);
+            return (
+              <article key={s.sign.id} className="signcard">
+                <h3>{s.sign.name}{story.loop && <span className="badge ev-likely loopbadge">好循環の可能性</span>}</h3>
+                {story.lines.map((t) => <p key={t}>{t}</p>)}
+                <p className="hint">{story.hint}</p>
+              </article>
+            );
+          })}
+        </section>
+      )}
+
       {problem && rank && (
         <section className="card" aria-labelledby="rank-h">
           <h2 id="rank-h">関連がありそうな要因（上位{rank.top.length || 5}つ）</h2>
@@ -128,6 +158,7 @@ export function Review({ repo }: { repo: Repo }) {
                         <span className="badges">
                           <span className={`badge ev-${c.evidence}`}>{EVIDENCE_LABEL[c.evidence]}</span>
                           <span className="badge">{c.n}日分</span>
+                          {c.loop && <span className="badge loopbadge">好循環の可能性</span>}
                         </span>
                       </span>
                       <span className="chev" aria-hidden="true">{openKey === c.key ? '▲' : '▼'}</span>
