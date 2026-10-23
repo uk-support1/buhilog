@@ -3,7 +3,8 @@ import type { Repo } from '../db/repo';
 import { buildSeries, compareApproach, PERIODS, type Period } from '../domain/analytics';
 import { toLocalDate } from '../domain/date';
 import { buildGroups, hasNamedGroups } from '../domain/groups';
-import { candidateSentence, EVIDENCE_LABEL, rankFactors, STRENGTH_LABEL, type Candidate } from '../domain/correlation';
+import { rankFactors, STRENGTH_LABEL, type Candidate } from '../domain/correlation';
+import { buildNarrative, EVIDENCE_LABEL } from '../domain/narrative';
 import { describeComparison } from '../domain/text';
 import type { Approach, DailyEntry, Problem } from '../domain/types';
 import { Buhio } from '../ui/Buhio';
@@ -121,18 +122,17 @@ export function Review({ repo }: { repo: Repo }) {
                     >
                       <span className="rankno">{i + 1}</span>
                       <span className="cmain">
-                        <strong>{c.name}</strong>
-                        <small className="muted"> {c.group}</small>
-                        <span className="csent">{c.positive ? '＋ ' : '－ '}{candidateSentence(c)}</span>
+                        <span className="cname"><strong>{c.name}</strong><small className="muted"> {c.group}</small></span>
+                        <span className="chead">{c.positive ? '▲ ' : '▼ '}{buildNarrative(problem.name, c).headline}</span>
+                        <span className="meter" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((Math.abs(c.rho) / 0.7) * 100))}%` }} /></span>
                         <span className="badges">
                           <span className={`badge ev-${c.evidence}`}>{EVIDENCE_LABEL[c.evidence]}</span>
-                          <span className="badge">関連の強さ: {STRENGTH_LABEL[c.strength]}</span>
                           <span className="badge">{c.n}日分</span>
                         </span>
                       </span>
                       <span className="chev" aria-hidden="true">{openKey === c.key ? '▲' : '▼'}</span>
                     </button>
-                    {openKey === c.key && <CandidateDetail c={c} />}
+                    {openKey === c.key && <CandidateDetail c={c} problemName={problem.name} />}
                   </li>
                 ))}
               </ol>
@@ -204,38 +204,24 @@ export function Review({ repo }: { repo: Repo }) {
   );
 }
 
-const f1 = (n: number) => n.toFixed(1);
-const clockText = (v: number) => { const h = Math.floor(v) % 24; const m = Math.round((v - Math.floor(v)) * 60); return `${h}:${String(m).padStart(2, '0')}`; };
-
-/** 要因ごとの具体的な内容（押したときに開く） */
-function CandidateDetail({ c }: { c: Candidate }) {
+/** 要因ごとの具体的な内容（押したときに開く）。数字より、文章で伝える。 */
+function CandidateDetail({ c, problemName }: { c: Candidate; problemName: string }) {
+  const n = buildNarrative(problemName, c);
   const d = c.detail;
-  const total = d.type === 'binary' ? d.nA + d.nB : d.nLow + d.nHigh;
-  const small = d.type === 'binary' ? Math.min(d.nA, d.nB) : Math.min(d.nLow, d.nHigh);
-  const unbalanced = small / total < 0.2 || (Math.max(d.type === 'binary' ? d.nA : d.nLow, d.type === 'binary' ? d.nB : d.nHigh) >= 3 * small);
-  const cutText = c.key === 's:bed' || c.key === 's:wake' ? clockText(d.type === 'numeric' ? d.cut : 0) : d.type === 'numeric' ? String(Math.round(d.cut * 100) / 100) : '';
+  const a = d.type === 'binary' ? d.nA : d.nHigh, b = d.type === 'binary' ? d.nB : d.nLow;
+  const small = Math.min(a, b);
+  const unbalanced = small / (a + b) < 0.2 || Math.max(a, b) >= 3 * small;
   return (
     <div className="cdetail">
-      {d.type === 'binary' ? (
-        <>
-          <p>実施した日：調子の平均 <strong>{f1(d.meanA)}</strong>（{d.nA}日）</p>
-          <p>実施しなかった日：調子の平均 <strong>{f1(d.meanB)}</strong>（{d.nB}日）</p>
-          <p>差（実施した日 − しなかった日）：{d.meanA - d.meanB > 0 ? '+' : ''}{f1(d.meanA - d.meanB)} ポイント（点数は大きいほど調子が良い）</p>
-        </>
-      ) : (
-        <>
-          <p>{c.name}が「{cutText}」より{c.more}日：調子の平均 <strong>{f1(d.meanHigh)}</strong>（{d.nHigh}日）</p>
-          <p>それ以外の日：調子の平均 <strong>{f1(d.meanLow)}</strong>（{d.nLow}日）</p>
-          <p>差：{d.meanHigh - d.meanLow > 0 ? '+' : ''}{f1(d.meanHigh - d.meanLow)} ポイント（点数は大きいほど調子が良い）</p>
-        </>
-      )}
-      <p className="muted small">関連の強さ（−1〜＋1）：{c.rho > 0 ? '+' : ''}{c.rho.toFixed(2)}（{STRENGTH_LABEL[c.strength]}）／ 比べた日数：{c.n}日</p>
+      <h4>数字で見ると</h4>
+      {n.numbers.map((t) => <p key={t}>{t}</p>)}
       {unbalanced && <p className="warn">比べた2つの側の日数に大きな差があります。慎重にご覧ください。</p>}
-      <ul className="muted small">
-        <li>同じ日の記録どうしの関連で、原因や効果を示すものではありません。</li>
-        <li>調子が悪い日に、その行動をする（しない）という逆の関係も考えられます。</li>
-        <li>睡眠や活動など、ほかの要因も重なっている可能性があります。</li>
-      </ul>
+      <h4>考えられる理由</h4>
+      <ul className="reasons">{n.reasons.map((t) => <li key={t}>{t}</li>)}</ul>
+      <h4>次にやってみること</h4>
+      <p>{n.tip}</p>
+      {n.note && <p className="muted small">{n.note}</p>}
+      <p className="muted small">参考: 関連の強さ {c.rho > 0 ? '+' : ''}{c.rho.toFixed(2)}（{STRENGTH_LABEL[c.strength]}）</p>
     </div>
   );
 }

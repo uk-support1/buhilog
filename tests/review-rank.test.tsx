@@ -35,18 +35,20 @@ describe('ふりかえり: 関連がありそうな要因', () => {
     expect(items.length).toBeLessThanOrEqual(5);
     const text = items.map((li) => li.textContent).join('|');
     expect(text).toContain('朝ヨガ');
-    expect(text).toContain('実施した日は、調子が高め（良い）傾向'); // 正の関連
-    expect(text).toContain('調子が低め（悪い）傾向'); // 負の関連（お酒）
+    expect(text).toMatch(/「朝ヨガ」を実施した日は、「頭痛」の調子が(はっきり|かなり|やや)良い傾向があります/); // 正の関連
+    expect(text).toMatch(/「頭痛」の調子が(はっきり|かなり|やや)悪い傾向があります/); // 負の関連（お酒）
     expect(text).not.toContain('めったにしない'); // 実施した日が少なすぎる要因は出さない
     // 詳細は最初は閉じている → 押すと開く
-    expect(screen.queryByText(/実施した日：調子の平均/)).toBeNull();
+    expect(screen.queryByText('考えられる理由')).toBeNull();
     const yogaBtn = within(items.find((li) => li.textContent!.includes('朝ヨガ'))!).getByRole('button');
     expect(yogaBtn).toHaveAttribute('aria-expanded', 'false');
     await user.click(yogaBtn);
     expect(yogaBtn).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText(/実施した日：調子の平均/)).toBeInTheDocument();
-    expect(screen.getByText(/実施しなかった日：調子の平均/)).toBeInTheDocument();
-    expect(screen.getAllByText(/原因や効果を示すものではありません/).length).toBeGreaterThan(0);
+    expect(screen.getByText('数字で見ると')).toBeInTheDocument();
+    expect(screen.getByText(/調子の平均は、実施した日が/)).toBeInTheDocument();
+    expect(screen.getByText('考えられる理由')).toBeInTheDocument();
+    expect(screen.getByText('次にやってみること')).toBeInTheDocument();
+    expect(screen.getByText(/確定ではありません/)).toBeInTheDocument();
   });
 
   it('「全期間」を選ぶと、最初の記録の日から今日までを対象にする', async () => {
