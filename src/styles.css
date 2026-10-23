@@ -108,3 +108,10 @@ input[type=time] { min-height:44px; }
 .chev { color:var(--muted); font-size:.8rem; padding-top:6px; }
 .cdetail { margin:4px 6px 8px 38px; padding:8px 10px; border-left:4px solid var(--line); } .cdetail p { margin:4px 0; }
 details.card > summary { cursor:pointer; min-height:36px; display:flex; align-items:center; }
+
+/* 要因カード（文章中心の表示） */
+.cname { display:block; } .chead { display:block; font-size:1rem; font-weight:700; line-height:1.5; margin:2px 0; }
+.cand.plus .chead { color:#1f6b45; } .cand.minus .chead { color:#a3264a; }
+.meter { display:block; height:8px; border-radius:999px; background:#ece7e8; overflow:hidden; margin:4px 0 2px; } .meter i { display:block; height:100%; border-radius:999px; }
+.cand.plus .meter i { background:linear-gradient(90deg,#8fd9ad,#2fa968); } .cand.minus .meter i { background:linear-gradient(90deg,#f4a3b5,#d93d68); }
+.cdetail h4 { margin:10px 0 2px; font-size:.95rem; color:var(--accent); } .cdetail .reasons { margin:2px 0; padding-left:20px; } .cdetail .reasons li { margin:4px 0; }

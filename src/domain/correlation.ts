@@ -170,7 +170,7 @@ export function rankFactors(entries: DailyEntry[], approaches: Approach[], probl
   return { top: all.slice(0, TOP_N), all, tested: m, ratedDays: rows.length, windowDays: days };
 }
 
-export const EVIDENCE_LABEL: Record<Evidence, string> = { likely: '有力な手がかり', maybe: '参考になりそう', weak: '弱い手がかり' };
+export { EVIDENCE_LABEL } from './narrative';
 export const STRENGTH_LABEL: Record<Strength, string> = { tiny: 'ほぼなし', weak: '弱い', moderate: '中くらい', strong: '強い' };
 
 /** 一覧に出す短い説明（向きを言葉で）。原因・効果とは言わない。 */
