@@ -23,7 +23,7 @@ export function createRepo(d: BuhiLogDB = db) {
       await d.problems.add(p);
       return p;
     },
-    async updateProblem(id: string, patch: Partial<Pick<Problem, 'name' | 'description' | 'order' | 'group' | 'section' | 'noteLabel' | 'noteAlways'>>) {
+    async updateProblem(id: string, patch: Partial<Pick<Problem, 'name' | 'description' | 'order' | 'group' | 'section' | 'noteLabel' | 'noteAlways' | 'pairedApproachId'>>) {
       await d.transaction('rw', d.problems, async () => {
         const cur = await d.problems.get(id);
         if (!cur) throw new Error('困りごとが見つかりません');

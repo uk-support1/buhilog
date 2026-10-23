@@ -2,9 +2,9 @@ import { z } from 'zod';
 import type { Repo } from './repo';
 import type { BuhiLogDB } from './db';
 import { convertLegacyRatings } from '../domain/scale';
-import { SCHEMA_VERSION } from '../domain/types';
+import { ensureVitalitySigns } from '../domain/signs';
 import {
-  AppSettingsSchema, ApproachSchema, DailyEntrySchema, ProblemSchema,
+  AppSettingsSchema, ApproachSchema, DailyEntrySchema, ProblemSchema, SCHEMA_VERSION,
   type AppSettings, type Approach, type DailyEntry, type Problem,
 } from '../domain/types';
 
@@ -42,6 +42,14 @@ function normalizeOlder(json: unknown): void {
     delete e.note;
   }
   for (const p of j.problems ?? []) if (p.name === '睡眠の質' && p.noteLabel == null) { p.noteLabel = '理由'; p.noteAlways = true; }
+  // v4: いきいきサイン（背筋の伸び・口角）。旧い書式のバックアップにも、同じ整え方を適用する（何度適用しても同じ）
+  if (j.settings && (j.settings.schemaVersion ?? 0) < 4 && Array.isArray(j.problems)) {
+    const holder = j as { problems: Problem[]; approaches?: Approach[]; settings: { schemaVersion?: number; groupOrder?: string[] } };
+    const r = ensureVitalitySigns(holder.problems, holder.approaches ?? [], holder.settings.groupOrder, () => crypto.randomUUID(), Date.now());
+    holder.problems = r.problems;
+    holder.approaches = r.approaches;
+    if (r.groupOrder) holder.settings.groupOrder = r.groupOrder;
+  }
   if (j.settings) j.settings.schemaVersion = SCHEMA_VERSION;
 }
 

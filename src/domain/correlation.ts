@@ -1,5 +1,6 @@
 import { windowDates } from './analytics';
 import { awakeningTotal } from './sleep';
+import { SIGN_GROUP } from './signs';
 import type { Approach, DailyEntry } from './types';
 
 /**
@@ -21,7 +22,9 @@ export interface Candidate {
   key: string;
   name: string;
   group: string;
-  kind: 'approach' | 'quantity' | 'sleep';
+  kind: 'approach' | 'quantity' | 'sleep' | 'signal';
+  /** いきいきサイン（原因にも結果にもなる項目）に関わる要因。好循環の可能性として別扱いで示す */
+  loop?: boolean;
   /** 数値の要因で「大きい」を表す言葉（多い・長い・遅い）。実施有無では使わない */
   more: string;
   rho: number;
@@ -88,14 +91,17 @@ function clockValue(hhmm?: string): number | null {
   return h;
 }
 
-interface Series { key: string; name: string; group: string; kind: Candidate['kind']; more: string; binary: boolean; value: (e: DailyEntry) => number | null }
+interface Series { key: string; name: string; group: string; kind: Candidate['kind']; more: string; binary: boolean; loop?: boolean; value: (e: DailyEntry) => number | null }
+/** いきいきサイン（状態=点数 と「意識した」の対）。要因の候補にも使う */
+export interface SignalDef { id: string; name: string; approachId?: string }
 
-function buildSeries(approaches: Approach[]): Series[] {
+function buildSeries(approaches: Approach[], signals: SignalDef[], targetId: string): Series[] {
   const list: Series[] = [];
+  const loopApproach = new Set(signals.flatMap((s) => (s.approachId ? [s.approachId] : [])));
   for (const a of approaches) {
     const group = a.group || 'その他';
     list.push({
-      key: `a:${a.id}`, name: a.name, group, kind: 'approach', more: '', binary: true,
+      key: `a:${a.id}`, name: a.name, group, kind: 'approach', more: '', binary: true, loop: loopApproach.has(a.id),
       value: (e) => { const s = e.approachStatuses[a.id]; return s === 'done' ? 1 : s === 'not_done' ? 0 : null; },
     });
     if (a.quantity) {
@@ -112,6 +118,11 @@ function buildSeries(approaches: Approach[]): Series[] {
   }
   const sleep = (key: string, name: string, more: string, value: (e: DailyEntry) => number | null): Series =>
     ({ key, name, group: '睡眠', kind: 'sleep', more, binary: false, value });
+  // 別のいきいきサインの「状態」（点数）も要因の候補に。選んだ困りごと自身は除く
+  for (const sg of signals) {
+    if (sg.id === targetId) continue;
+    list.push({ key: `r:${sg.id}`, name: sg.name, group: SIGN_GROUP, kind: 'signal', more: '高い', binary: false, loop: true, value: (e) => e.problemRatings[sg.id] ?? null });
+  }
   list.push(
     sleep('s:hours', '睡眠時間', '長い', (e) => e.sleepHours ?? null),
     sleep('s:bed', '就寝時刻', '遅い', (e) => clockValue(e.bedtime)),
@@ -122,7 +133,7 @@ function buildSeries(approaches: Approach[]): Series[] {
   return list;
 }
 
-export function rankFactors(entries: DailyEntry[], approaches: Approach[], problemId: string, endDate: string, days: number): RankResult {
+export function rankFactors(entries: DailyEntry[], approaches: Approach[], problemId: string, endDate: string, days: number, signals: SignalDef[] = []): RankResult {
   const byDate = new Map(entries.map((e) => [e.localDate, e]));
   const rows = windowDates(endDate, days).flatMap((d) => {
     const e = byDate.get(d);
@@ -130,7 +141,7 @@ export function rankFactors(entries: DailyEntry[], approaches: Approach[], probl
     return e && y != null ? [{ e, y }] : [];
   });
   const found: Candidate[] = [];
-  for (const s of buildSeries(approaches)) {
+  for (const s of buildSeries(approaches, signals, problemId)) {
     const xs: number[] = [], ys: number[] = [];
     for (const { e, y } of rows) { const v = s.value(e); if (v != null) { xs.push(v); ys.push(y); } }
     const n = xs.length;
@@ -153,7 +164,7 @@ export function rankFactors(entries: DailyEntry[], approaches: Approach[], probl
     if (!sp) continue;
     found.push({
       key: s.key, name: s.name, group: s.group, kind: s.kind, more: s.more, rho: sp.rho, p: sp.p, n,
-      evidence: 'weak', strength: strengthOf(sp.rho), positive: sp.rho > 0, detail,
+      evidence: 'weak', strength: strengthOf(sp.rho), positive: sp.rho > 0, detail, ...(s.loop ? { loop: true } : {}),
     });
   }
   // 同じ試したことの「実施有無」と「量」は重複するので、確からしさが高いほうだけ残す

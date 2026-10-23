@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { legacyRatingToNew } from '../domain/scale';
+import { ensureVitalitySigns } from '../domain/signs';
 import type { AppSettings, Approach, DailyEntry, Problem } from '../domain/types';
 
 type SettingsRow = AppSettings & { key: 'app' };
@@ -56,6 +57,26 @@ export class BuhiLogDB extends Dexie {
           if (p.name === '睡眠の質') { p.noteLabel = '理由'; p.noteAlways = true; }
         });
         await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 3; });
+      });
+    // v4: 「いきいきサイン」（背筋の伸び・口角: 状態と「意識した」の2つの面）を追加。既存の項目・記録は変更しない。
+    this.version(4)
+      .stores({
+        problems: 'id, order, archivedAt',
+        approaches: 'id, archivedAt',
+        dailyEntries: 'id, &localDate',
+        settings: 'key',
+      })
+      .upgrade(async (tx) => {
+        const problems = await tx.table('problems').toArray();
+        const approaches = await tx.table('approaches').toArray();
+        const settings = await tx.table('settings').get('app');
+        const r = ensureVitalitySigns(problems, approaches, settings?.groupOrder, () => crypto.randomUUID(), Date.now());
+        if (r.changed) {
+          await tx.table('problems').bulkPut(r.problems);
+          await tx.table('approaches').bulkPut(r.approaches);
+          if (settings && r.groupOrder) await tx.table('settings').put({ ...settings, groupOrder: r.groupOrder });
+        }
+        await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 4; });
       });
   }
 }
