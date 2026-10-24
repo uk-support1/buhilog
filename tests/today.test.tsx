@@ -33,9 +33,9 @@ describe('かんたん記録', () => {
     const user = userEvent.setup();
     const { unmount } = render(<Today repo={repo} initialDate="2026-05-02" />);
     await screen.findByText('痛み');
-    expect(screen.queryByLabelText('就寝時刻 時')).toBeNull();
+    expect(screen.queryByLabelText('就寝時刻')).toBeNull();
     await user.click(screen.getByRole('button', { name: /くわしく入力する/ }));
-    expect(screen.getByLabelText('就寝時刻 時')).toBeInTheDocument();
+    expect(screen.getByLabelText('就寝時刻')).toBeInTheDocument();
     unmount();
 
     await repo.saveEntry({ localDate: '2026-05-03', problemRatings: { [p.id]: 2 }, problemNotes: { [p.id]: '朝つらい' }, approachStatuses: {} });
@@ -95,12 +95,10 @@ describe('睡眠の入力', () => {
     render(<Today repo={repo} initialDate="2026-05-06" />);
     await screen.findByRole('tablist');
     // 初期値は 23:00 / 7:00（分は10分単位の選択）
-    expect(screen.getByLabelText('就寝時刻 時')).toHaveValue('23');
-    expect(screen.getByLabelText('起床時刻 時')).toHaveValue('07');
-    await user.selectOptions(screen.getByLabelText('就寝時刻 時'), '22');
-    await user.selectOptions(screen.getByLabelText('就寝時刻 分'), '30');
-    await user.selectOptions(screen.getByLabelText('起床時刻 時'), '06');
-    await user.selectOptions(screen.getByLabelText('起床時刻 分'), '00');
+    expect(screen.getByLabelText('就寝時刻')).toHaveValue('23:00');
+    expect(screen.getByLabelText('起床時刻')).toHaveValue('07:00');
+    await user.selectOptions(screen.getByLabelText('就寝時刻'), '22:30');
+    await user.selectOptions(screen.getByLabelText('起床時刻'), '06:00');
     await user.type(screen.getByLabelText(/昼寝/), '1');
     expect(screen.getByText(/合計睡眠時間（自動）/).textContent).toMatch(/8\.5 時間/);
     await user.selectOptions(screen.getByLabelText('3〜4時間目'), '1');

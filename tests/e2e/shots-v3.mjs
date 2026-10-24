@@ -16,7 +16,7 @@ await p.locator('input[type=file]').setInputFiles(json);
 await p.getByRole('button', { name: 'この内容で置き換える' }).click();
 await p.getByRole('tablist', { name: '記録の種類' }).waitFor(); // 復元に成功すると、自動で「記録」画面に切り替わる
 await p.getByRole('tab', { name: /睡眠/ }).click();
-await p.getByLabel('就寝時刻 時').scrollIntoViewIfNeeded();
+await p.getByLabel('就寝時刻').scrollIntoViewIfNeeded();
 await p.screenshot({ path: `${out}/10-sleep.png` });
 await p.getByText('中途覚醒の回数').evaluate((el) => el.scrollIntoView({ block: 'start' }));
 await p.evaluate(() => window.scrollBy(0, -120));
