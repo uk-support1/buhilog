@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { formatJa, isValidLocalDate, toLocalDate } from '../domain/date';
-import { buildGroups, hasNamedGroups } from '../domain/groups';
+import { BULK_NOT_DONE_GROUPS, buildGroups, hasNamedGroups } from '../domain/groups';
 import { pairedApproachIds, SIGN_GROUP, SIGN_INTRO } from '../domain/signs';
 import { AWAKE_LABELS, DEFAULT_BEDTIME, DEFAULT_WAKETIME, awakeningTotal, totalSleepHours, nightHours } from '../domain/sleep';
 import type { Approach, ApproachStatus, Problem } from '../domain/types';
@@ -27,9 +27,9 @@ interface Form {
   noteInsights: string;
   noteOther: string;
 }
-// 就寝・起床の初期値は 23:00 / 7:00（そのまま保存すると、この時刻で記録される）
+// 就寝・起床は未入力から始める。23:00 / 7:00 は「初期値の表示」（選択画面の開始位置）で、触るまでは入力済みにしない
 const emptyForm = (): Form => ({
-  ratings: {}, notes: {}, statuses: {}, sleep: '', bed: DEFAULT_BEDTIME, wake: DEFAULT_WAKETIME, nap: '',
+  ratings: {}, notes: {}, statuses: {}, sleep: '', bed: '', wake: '', nap: '',
   awake: Array(5).fill(''), quantities: {}, stress: null, noteEvents: '', noteInsights: '', noteOther: '',
 });
 
@@ -190,6 +190,21 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
     </div>
   );
 
+  /** 未回答のものだけを、まとめて「実施しなかった」にする（「実施した」にしたものは変えない） */
+  const bulkButton = (list: Approach[]) => {
+    const targets = list.filter((a) => (form.statuses[a.id] ?? 'unknown') === 'unknown');
+    return (
+      <button
+        type="button"
+        className="bulk"
+        disabled={targets.length === 0}
+        onClick={() => edit((f) => ({ ...f, statuses: { ...f.statuses, ...Object.fromEntries(targets.map((a) => [a.id, 'not_done' as ApproachStatus])) } }))}
+      >
+        未回答をまとめて「実施しなかった」にする（{targets.length}件）
+      </button>
+    );
+  };
+
   const practiceRow = (a: Approach) => (
     <div role="radiogroup" aria-label={a.name} className="practice">
       <span className="plabel">{a.name}？</span>
@@ -267,9 +282,17 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
     <section className="card" aria-label="睡眠">
       <h2>睡眠</h2>
       <div className="two">
-        <TimeSelect label="就寝時刻" value={form.bed} onChange={(v) => edit((f) => ({ ...f, bed: v }))} />
-        <TimeSelect label="起床時刻" value={form.wake} onChange={(v) => edit((f) => ({ ...f, wake: v }))} />
+        <TimeSelect label="就寝時刻" value={form.bed} ghost={DEFAULT_BEDTIME} onChange={(v) => edit((f) => ({ ...f, bed: v }))} />
+        <TimeSelect label="起床時刻" value={form.wake} ghost={DEFAULT_WAKETIME} onChange={(v) => edit((f) => ({ ...f, wake: v }))} />
       </div>
+      {(!form.bed || !form.wake) && (
+        <div className="ghosthint">
+          <p className="muted small">薄い文字は初期値の表示です。触るまでは「未入力」のままです。</p>
+          <button type="button" onClick={() => edit((f) => ({ ...f, bed: f.bed || DEFAULT_BEDTIME, wake: f.wake || DEFAULT_WAKETIME }))}>
+            初期値（就寝 {DEFAULT_BEDTIME}／起床 {DEFAULT_WAKETIME}）のまま入力する
+          </button>
+        </div>
+      )}
       <label className="field">
         昼寝（時間）
         <input inputMode="decimal" placeholder="例: 1 または 0.5" value={form.nap} onChange={(e) => edit((f) => ({ ...f, nap: e.target.value }))} />
@@ -385,6 +408,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
                       {s.problems.length > 0 && <p className="muted small">{PROBLEM_SCALE_LABEL}</p>}
                       {s.problems.map((p) => problemBlock(p, 'h3'))}
                       {s.approaches.some((a) => !paired.has(a.id)) && <p className="muted small">「実施しなかった」と「未回答」は別のものとして扱います。</p>}
+                      {BULK_NOT_DONE_GROUPS.includes(g.name) && bulkButton(s.approaches.filter((a) => !paired.has(a.id)))}
                       {s.approaches.filter((a) => !paired.has(a.id)).map(approachBlock)}
                     </section>
                   )),

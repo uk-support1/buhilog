@@ -2,6 +2,9 @@ import type { Approach, Problem } from './types';
 
 export const UNGROUPED = 'その他';
 
+/** 未回答をまとめて「実施しなかった」にできるグループ。「しなかった」が良し悪しの意味を持たない（中立な）グループに限る */
+export const BULK_NOT_DONE_GROUPS: string[] = ['運動要因'];
+
 export interface Section {
   title: string | null;
   problems: Problem[];

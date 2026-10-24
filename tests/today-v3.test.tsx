@@ -74,6 +74,7 @@ describe('睡眠タブ・メモ', () => {
     expect(reason).toBeVisible();
     expect(screen.queryByText('メモ', { selector: 'summary' })).toBeNull();
     await user.type(reason, 'まだ眠い');
+    expect(screen.getByRole('tab', { name: /睡眠0\/4/ })).toBeInTheDocument(); // 初期値の表示だけでは「入力済み」にならない
     const minutes = screen.getByLabelText('就寝時刻 分') as HTMLSelectElement;
     expect(Array.from(minutes.options).map((o) => o.value)).toEqual(['00', '10', '20', '30', '40', '50']);
     // 中途覚醒は縦並びの5行（6〜7時間目なし）
@@ -82,7 +83,10 @@ describe('睡眠タブ・メモ', () => {
     await screen.findByText(/保存しました/);
     const e = await repo.getEntry('2026-06-03');
     expect(e?.problemNotes[sleep.id]).toBe('まだ眠い');
-    expect(e).toMatchObject({ bedtime: '23:00', wakeTime: '07:00', sleepHours: 8 }); // 初期値のまま保存
+    // 初期値(23:00/7:00)の表示は、触っていないので、記録されない
+    expect(e?.bedtime).toBeUndefined();
+    expect(e?.wakeTime).toBeUndefined();
+    expect(e?.sleepHours).toBeUndefined();
   });
 
   it('メモは「出来事」「気づき」「その他」の3つで、ストレスの入力欄はない', async () => {
@@ -100,13 +104,38 @@ describe('睡眠タブ・メモ', () => {
     expect(await repo.getEntry('2026-06-04')).toMatchObject({ noteEvents: '散歩した', noteInsights: '朝の光が良い', noteOther: '特になし' });
   });
 
-  it('就寝・起床の初期値は、既存の記録には影響しない（空のままの過去記録は空）', async () => {
+  it('初期値の表示は薄く出て、選択の開始位置は23時・7時。触った側だけが入力済みになる', async () => {
     const { repo } = await setup('v3e');
-    await repo.saveEntry({ localDate: '2026-06-05', problemRatings: {}, problemNotes: {}, approachStatuses: {} });
+    const user = userEvent.setup();
     render(<Today repo={repo} initialDate="2026-06-05" />);
     await screen.findByRole('tablist');
-    expect(screen.getByLabelText('就寝時刻 時')).toHaveValue('');
-    expect(screen.getByLabelText('就寝時刻 分')).toBeDisabled();
+    expect(screen.getByLabelText('就寝時刻 時')).toHaveValue('23'); // 選択の開始位置
+    expect(screen.getByLabelText('就寝時刻 時')).toHaveClass('ghost'); // 薄い（未入力）
+    expect(screen.getByLabelText('起床時刻 時')).toHaveValue('07');
+    expect(screen.getByRole('tab', { name: /睡眠0\/4/ })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('就寝時刻 分'), '30'); // 時は初期値のまま、分だけ触る → 23:30
+    expect(screen.getByLabelText('就寝時刻 時')).not.toHaveClass('ghost');
+    expect(screen.getByLabelText('起床時刻 時')).toHaveClass('ghost'); // 起床は未入力のまま
+    expect(screen.getByRole('tab', { name: /睡眠1\/4/ })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /保存する/ }));
+    await screen.findByText(/保存しました/);
+    const e = await repo.getEntry('2026-06-05');
+    expect(e?.bedtime).toBe('23:30');
+    expect(e?.wakeTime).toBeUndefined(); // 触っていないので記録されない
+  });
+
+  it('「初期値のまま入力する」ボタンで、就寝23:00・起床7:00が入力済みになり、合計睡眠時間も計算される', async () => {
+    const { repo } = await setup('v3f');
+    const user = userEvent.setup();
+    render(<Today repo={repo} initialDate="2026-06-06" />);
+    await screen.findByRole('tablist');
+    await user.click(screen.getByRole('button', { name: /初期値.*のまま入力する/ }));
+    expect(screen.getByRole('tab', { name: /睡眠2\/4/ })).toBeInTheDocument();
+    expect(screen.getByText(/合計睡眠時間（自動）/).textContent).toMatch(/8 時間/);
+    expect(screen.queryByRole('button', { name: /初期値.*のまま入力する/ })).toBeNull(); // 両方入力済みなら消える
+    await user.click(screen.getByRole('button', { name: /保存する/ }));
+    await screen.findByText(/保存しました/);
+    expect(await repo.getEntry('2026-06-06')).toMatchObject({ bedtime: '23:00', wakeTime: '07:00', sleepHours: 8 });
   });
 });
 
