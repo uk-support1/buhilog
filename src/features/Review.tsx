@@ -3,7 +3,7 @@ import type { Repo } from '../db/repo';
 import { buildSeries, compareApproach, PERIODS, type Period } from '../domain/analytics';
 import { toLocalDate } from '../domain/date';
 import { buildGroups, hasNamedGroups } from '../domain/groups';
-import { rankFactors, STRENGTH_LABEL, type Candidate, type SignalDef } from '../domain/correlation';
+import { rankFactors, STRENGTH_LABEL, type Candidate, type RatedFactorDef, type SignalDef } from '../domain/correlation';
 import { summarizeSign, signStory } from '../domain/signSummary';
 import { SIGN_GROUP } from '../domain/signs';
 import { buildNarrative, EVIDENCE_LABEL } from '../domain/narrative';
@@ -44,7 +44,12 @@ export function Review({ repo }: { repo: Repo }) {
     () => problems.filter((p) => p.pairedApproachId && !p.archivedAt).map((p) => ({ id: p.id, name: p.name, approachId: p.pairedApproachId })),
     [problems],
   );
-  const rank = useMemo(() => (pid ? rankFactors(entries, approaches, pid, end, period, signals) : null), [entries, approaches, pid, end, period, signals]);
+  // 5段階で記録する要因（日中要因の3項目など）も、ほかの困りごとの要因として比べる
+  const ratedFactors: RatedFactorDef[] = useMemo(
+    () => problems.filter((p) => p.asFactor && !p.archivedAt && !p.pairedApproachId).map((p) => ({ id: p.id, name: p.name, group: p.group })),
+    [problems],
+  );
+  const rank = useMemo(() => (pid ? rankFactors(entries, approaches, pid, end, period, signals, ratedFactors) : null), [entries, approaches, pid, end, period, signals, ratedFactors]);
   const signSummaries = useMemo(
     () => problems.flatMap((p) => {
       const a = approaches.find((x) => x.id === p.pairedApproachId);

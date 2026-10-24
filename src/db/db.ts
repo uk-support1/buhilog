@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { legacyRatingToNew } from '../domain/scale';
+import { convertDayFactors } from '../domain/dayFactors';
 import { ensureVitalitySigns } from '../domain/signs';
 import type { AppSettings, Approach, DailyEntry, Problem } from '../domain/types';
 
@@ -77,6 +78,23 @@ export class BuhiLogDB extends Dexie {
           if (settings && r.groupOrder) await tx.table('settings').put({ ...settings, groupOrder: r.groupOrder });
         }
         await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 4; });
+      });
+    // v5: 日中要因の3項目（マルチタスク・コミュニケーション・誰かの役に立つ）を5段階評価へ。旧い記録は変換して引き継ぐ。
+    this.version(5)
+      .stores({
+        problems: 'id, order, archivedAt',
+        approaches: 'id, archivedAt',
+        dailyEntries: 'id, &localDate',
+        settings: 'key',
+      })
+      .upgrade(async (tx) => {
+        const r = convertDayFactors(await tx.table('problems').toArray(), await tx.table('approaches').toArray(), await tx.table('dailyEntries').toArray(), () => crypto.randomUUID(), Date.now());
+        if (r.changed) {
+          await tx.table('problems').bulkPut(r.problems);
+          await tx.table('approaches').bulkPut(r.approaches);
+          await tx.table('dailyEntries').bulkPut(r.entries);
+        }
+        await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 5; });
       });
   }
 }
