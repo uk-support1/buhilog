@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Repo } from './repo';
 import type { BuhiLogDB } from './db';
 import { convertLegacyRatings } from '../domain/scale';
+import { convertDayFactors } from '../domain/dayFactors';
 import { ensureVitalitySigns } from '../domain/signs';
 import {
   AppSettingsSchema, ApproachSchema, DailyEntrySchema, ProblemSchema, SCHEMA_VERSION,
@@ -49,6 +50,14 @@ function normalizeOlder(json: unknown): void {
     holder.problems = r.problems;
     holder.approaches = r.approaches;
     if (r.groupOrder) holder.settings.groupOrder = r.groupOrder;
+  }
+  // v5: 日中要因の3項目を5段階評価へ（旧い書式のバックアップにも適用する）
+  if (j.settings && (j.settings.schemaVersion ?? 0) < 5 && Array.isArray(j.problems)) {
+    const h = j as { problems: Problem[]; approaches?: Approach[]; dailyEntries?: DailyEntry[] };
+    const r = convertDayFactors(h.problems, h.approaches ?? [], h.dailyEntries ?? [], () => crypto.randomUUID(), Date.now());
+    h.problems = r.problems;
+    h.approaches = r.approaches;
+    h.dailyEntries = r.entries;
   }
   if (j.settings) j.settings.schemaVersion = SCHEMA_VERSION;
 }

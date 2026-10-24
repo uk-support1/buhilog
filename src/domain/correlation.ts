@@ -22,7 +22,7 @@ export interface Candidate {
   key: string;
   name: string;
   group: string;
-  kind: 'approach' | 'quantity' | 'sleep' | 'signal';
+  kind: 'approach' | 'quantity' | 'sleep' | 'signal' | 'rated';
   /** いきいきサイン（原因にも結果にもなる項目）に関わる要因。好循環の可能性として別扱いで示す */
   loop?: boolean;
   /** 数値の要因で「大きい」を表す言葉（多い・長い・遅い）。実施有無では使わない */
@@ -94,8 +94,10 @@ function clockValue(hhmm?: string): number | null {
 interface Series { key: string; name: string; group: string; kind: Candidate['kind']; more: string; binary: boolean; loop?: boolean; value: (e: DailyEntry) => number | null }
 /** いきいきサイン（状態=点数 と「意識した」の対）。要因の候補にも使う */
 export interface SignalDef { id: string; name: string; approachId?: string }
+/** 5段階で記録する要因（日中の過ごし方など）。点数そのものを要因として比べる */
+export interface RatedFactorDef { id: string; name: string; group?: string }
 
-function buildSeries(approaches: Approach[], signals: SignalDef[], targetId: string): Series[] {
+function buildSeries(approaches: Approach[], signals: SignalDef[], targetId: string, rated: RatedFactorDef[]): Series[] {
   const list: Series[] = [];
   const loopApproach = new Set(signals.flatMap((s) => (s.approachId ? [s.approachId] : [])));
   for (const a of approaches) {
@@ -123,6 +125,10 @@ function buildSeries(approaches: Approach[], signals: SignalDef[], targetId: str
     if (sg.id === targetId) continue;
     list.push({ key: `r:${sg.id}`, name: sg.name, group: SIGN_GROUP, kind: 'signal', more: '高い', binary: false, loop: true, value: (e) => e.problemRatings[sg.id] ?? null });
   }
+  for (const f of rated) {
+    if (f.id === targetId) continue;
+    list.push({ key: `f:${f.id}`, name: f.name, group: f.group || 'その他', kind: 'rated', more: '良い', binary: false, value: (e) => e.problemRatings[f.id] ?? null });
+  }
   list.push(
     sleep('s:hours', '睡眠時間', '長い', (e) => e.sleepHours ?? null),
     sleep('s:bed', '就寝時刻', '遅い', (e) => clockValue(e.bedtime)),
@@ -133,7 +139,7 @@ function buildSeries(approaches: Approach[], signals: SignalDef[], targetId: str
   return list;
 }
 
-export function rankFactors(entries: DailyEntry[], approaches: Approach[], problemId: string, endDate: string, days: number, signals: SignalDef[] = []): RankResult {
+export function rankFactors(entries: DailyEntry[], approaches: Approach[], problemId: string, endDate: string, days: number, signals: SignalDef[] = [], rated: RatedFactorDef[] = []): RankResult {
   const byDate = new Map(entries.map((e) => [e.localDate, e]));
   const rows = windowDates(endDate, days).flatMap((d) => {
     const e = byDate.get(d);
@@ -141,7 +147,7 @@ export function rankFactors(entries: DailyEntry[], approaches: Approach[], probl
     return e && y != null ? [{ e, y }] : [];
   });
   const found: Candidate[] = [];
-  for (const s of buildSeries(approaches, signals, problemId)) {
+  for (const s of buildSeries(approaches, signals, problemId, rated)) {
     const xs: number[] = [], ys: number[] = [];
     for (const { e, y } of rows) { const v = s.value(e); if (v != null) { xs.push(v); ys.push(y); } }
     const n = xs.length;

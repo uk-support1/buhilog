@@ -133,6 +133,7 @@ function tipFor(c: Candidate, kind: Kind): string {
     return '就寝・起床の時刻をできるだけ一定にして、' + two;
   }
   if (kind === 'alcohol') return c.positive ? '飲んだ日の睡眠も、あわせて見比べてみましょう。' : '量を控えめにした日をつくって、' + two;
+  if (c.kind === 'rated' && !c.positive) return '無理をせず、自分のペースを保ちながら、' + two;
   const what = c.kind === 'approach' ? `「${c.name}」` : `${c.name}が${c.more}日`;
   return c.positive
     ? `${what}を、無理のない範囲で増やして、${two}`
@@ -145,7 +146,7 @@ function tipFor(c: Candidate, kind: Kind): string {
 export function buildNarrative(problemName: string, c: Candidate): Narrative {
   const kind = kindOf(c);
   const good = c.positive ? '良い' : '悪い';
-  const subject = c.kind === 'signal' ? `「${c.name}」が良い状態の日ほど` : c.kind === 'approach' ? `「${c.name}」を実施した日は` : `${c.name}が${c.more}日ほど`;
+  const subject = c.kind === 'signal' || c.kind === 'rated' ? `「${c.name}」が良い状態の日ほど` : c.kind === 'approach' ? `「${c.name}」を実施した日は` : `${c.name}が${c.more}日ほど`;
   const target = `「${problemName}」の調子`;
   const headline = c.strength === 'tiny'
     ? `${subject}、${target}にごくわずかな差が見えるだけです`
@@ -153,7 +154,7 @@ export function buildNarrative(problemName: string, c: Candidate): Narrative {
 
   const d = c.detail;
   const numbers: string[] = [];
-  if (c.kind === 'signal' && d.type === 'numeric') {
+  if ((c.kind === 'signal' || c.kind === 'rated') && d.type === 'numeric') {
     numbers.push(`「${c.name}」が高め（${Math.round(d.cut * 10) / 10}より上）の日の調子の平均は ${f1(d.meanHigh)}（${d.nHigh}日）、そうでない日は ${f1(d.meanLow)}（${d.nLow}日）。${gapWords(d.meanHigh - d.meanLow)}です。`);
   } else if (d.type === 'binary') {
     numbers.push(`調子の平均は、実施した日が ${f1(d.meanA)}（${d.nA}日）、しなかった日が ${f1(d.meanB)}（${d.nB}日）。${gapWords(d.meanA - d.meanB)}です。`);

@@ -23,6 +23,8 @@ export const ProblemSchema = z.object({
   noteAlways: z.boolean().optional(),
   /** 「いきいきサイン」: この項目（自然にできていた度合い）と対になる「意識した」項目（試したこと）のID */
   pairedApproachId: z.string().min(1).max(64).optional(),
+  /** この項目の点数は、ほかの困りごとの「要因」としても比べる（例: 日中の過ごし方を5段階で記録する項目） */
+  asFactor: z.boolean().optional(),
   order: z.number().int(),
   archivedAt: ts.optional(),
   createdAt: ts,
@@ -91,7 +93,7 @@ export const AppSettingsSchema = z.object({
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: SCHEMA_VERSION,
   onboardingCompleted: false,
