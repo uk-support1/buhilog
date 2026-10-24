@@ -75,8 +75,15 @@ describe('睡眠タブ・メモ', () => {
     expect(screen.queryByText('メモ', { selector: 'summary' })).toBeNull();
     await user.type(reason, 'まだ眠い');
     expect(screen.getByRole('tab', { name: /睡眠0\/4/ })).toBeInTheDocument(); // 初期値の表示だけでは「入力済み」にならない
-    const minutes = screen.getByLabelText('就寝時刻 分') as HTMLSelectElement;
-    expect(Array.from(minutes.options).map((o) => o.value)).toEqual(['00', '10', '20', '30', '40', '50']);
+    // 時刻は1つの選択（10分刻み・1日分）。就寝は18時始まり、起床は3時始まりで、夜をまたいでも並びが途切れない
+    const bed = screen.getByLabelText('就寝時刻') as HTMLSelectElement;
+    const values = Array.from(bed.options).map((o) => o.value).filter(Boolean);
+    expect(values).toHaveLength(144);
+    expect(values.every((x) => x.endsWith('0') && /^\d\d:\d0$/.test(x))).toBe(true); // 10分刻み
+    expect(values.slice(0, 3)).toEqual(['18:00', '18:10', '18:20']);
+    expect(values[values.indexOf('23:50') + 1]).toBe('00:00');
+    expect(Array.from((screen.getByLabelText('起床時刻') as HTMLSelectElement).options)[1].value).toBe('03:00');
+    expect(Array.from(bed.options).map((o) => o.textContent)).toContain('23:00');
     // 中途覚醒は縦並びの5行（6〜7時間目なし）
     expect(screen.getAllByText(/^\d〜\d時間目$/)).toHaveLength(5);
     await user.click(screen.getByRole('button', { name: /保存する/ }));
@@ -109,13 +116,13 @@ describe('睡眠タブ・メモ', () => {
     const user = userEvent.setup();
     render(<Today repo={repo} initialDate="2026-06-05" />);
     await screen.findByRole('tablist');
-    expect(screen.getByLabelText('就寝時刻 時')).toHaveValue('23'); // 選択の開始位置
-    expect(screen.getByLabelText('就寝時刻 時')).toHaveClass('ghost'); // 薄い（未入力）
-    expect(screen.getByLabelText('起床時刻 時')).toHaveValue('07');
+    expect(screen.getByLabelText('就寝時刻')).toHaveValue('23:00'); // 選択の開始位置
+    expect(screen.getByLabelText('就寝時刻')).toHaveClass('ghost'); // 薄い（未入力）
+    expect(screen.getByLabelText('起床時刻')).toHaveValue('07:00');
     expect(screen.getByRole('tab', { name: /睡眠0\/4/ })).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText('就寝時刻 分'), '30'); // 時は初期値のまま、分だけ触る → 23:30
-    expect(screen.getByLabelText('就寝時刻 時')).not.toHaveClass('ghost');
-    expect(screen.getByLabelText('起床時刻 時')).toHaveClass('ghost'); // 起床は未入力のまま
+    await user.selectOptions(screen.getByLabelText('就寝時刻'), '23:30'); // 就寝だけ触る
+    expect(screen.getByLabelText('就寝時刻')).not.toHaveClass('ghost');
+    expect(screen.getByLabelText('起床時刻')).toHaveClass('ghost'); // 起床は未入力のまま
     expect(screen.getByRole('tab', { name: /睡眠1\/4/ })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /保存する/ }));
     await screen.findByText(/保存しました/);
@@ -178,5 +185,20 @@ describe('旧データの引き継ぎ（v2 → v3）', () => {
     expect(r.backup.dailyEntries[0].awakenings).toEqual([1, 0, 0, 0, 0]);
     expect(r.backup.dailyEntries[0].noteOther).toBe('メモ');
     expect(r.backup.problems[0]).toMatchObject({ noteLabel: '理由', noteAlways: true });
+  });
+});
+
+describe('時刻の選択（1つのホイール）', () => {
+  it('10分刻み以外の既存の時刻（例: 22:35）も、そのまま表示され、保存し直しても変わらない', async () => {
+    const { repo } = await setup('v3g');
+    await repo.saveEntry({ localDate: '2026-06-07', problemRatings: {}, problemNotes: {}, approachStatuses: {}, bedtime: '22:35', wakeTime: '06:40' });
+    const user = userEvent.setup();
+    render(<Today repo={repo} initialDate="2026-06-07" />);
+    await screen.findByRole('tablist');
+    expect(screen.getByLabelText('就寝時刻')).toHaveValue('22:35');
+    expect(screen.getByLabelText('就寝時刻')).not.toHaveClass('ghost');
+    await user.click(screen.getByRole('button', { name: /保存する/ }));
+    await screen.findByText(/保存しました/);
+    expect(await repo.getEntry('2026-06-07')).toMatchObject({ bedtime: '22:35', wakeTime: '06:40', sleepHours: 8.08 });
   });
 });

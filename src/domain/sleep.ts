@@ -4,7 +4,7 @@ export const AWAKE_LABELS = ['1〜2時間目', '2〜3時間目', '3〜4時間目
 /** 合計に含める区間の数（1〜6時間目の5区間すべて） */
 export const AWAKE_COUNTED = 5;
 
-/** 時刻の選択: 分は10分単位 */
+/** 時刻の選択: 10分刻み（MINUTE_STEPS の個数で刻みを決める） */
 export const MINUTE_STEPS = ['00', '10', '20', '30', '40', '50'] as const;
 export const DEFAULT_BEDTIME = '23:00';
 export const DEFAULT_WAKETIME = '07:00';

@@ -282,8 +282,8 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
     <section className="card" aria-label="睡眠">
       <h2>睡眠</h2>
       <div className="two">
-        <TimeSelect label="就寝時刻" value={form.bed} ghost={DEFAULT_BEDTIME} onChange={(v) => edit((f) => ({ ...f, bed: v }))} />
-        <TimeSelect label="起床時刻" value={form.wake} ghost={DEFAULT_WAKETIME} onChange={(v) => edit((f) => ({ ...f, wake: v }))} />
+        <TimeSelect label="就寝時刻" value={form.bed} ghost={DEFAULT_BEDTIME} startHour={18} onChange={(v) => edit((f) => ({ ...f, bed: v }))} />
+        <TimeSelect label="起床時刻" value={form.wake} ghost={DEFAULT_WAKETIME} startHour={3} onChange={(v) => edit((f) => ({ ...f, wake: v }))} />
       </div>
       {(!form.bed || !form.wake) && (
         <div className="ghosthint">
