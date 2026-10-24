@@ -122,3 +122,7 @@ details.card > summary { cursor:pointer; min-height:36px; display:flex; align-it
 /* いきいきサイン（ふりかえり） */
 .signs { background:linear-gradient(180deg,#fffaf0,#fff); border-color:#f3dc80; } .signcard { border-top:2px dotted var(--line); padding-top:8px; margin-top:8px; } .signcard h3 { margin:0 0 4px; } .signcard p { margin:4px 0; }
 .signcard .hint { background:var(--sun); border-radius:10px; padding:6px 10px; font-weight:600; } .loopbadge { background:#ffe0a3 !important; margin-left:6px; font-weight:700; }
+
+/* 初期値の表示（未入力）は薄く */
+select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthint { margin:4px 0 8px; } .ghosthint button { width:100%; }
+.bulk { width:100%; margin:6px 0 10px; background:var(--sky); border-color:#bfe0f7; color:var(--sky-fg); font-weight:700; }

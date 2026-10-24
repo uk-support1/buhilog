@@ -68,7 +68,7 @@ describe('グループ（タブ）表示', () => {
     const user = userEvent.setup();
     render(<Today repo={repo} initialDate="2026-05-05" />);
     await screen.findByRole('tablist');
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['困りごと0/1', '睡眠2/4', '朝要因0/1', 'メモ'] /* 睡眠: 就寝・起床の初期値(23:00/7:00)が入力済み扱い */);
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['困りごと0/1', '睡眠0/4', '朝要因0/1', 'メモ'] /* 初期値(23:00/7:00)の表示は、触るまで未入力 */);
     expect(screen.getByText('頭痛')).toBeInTheDocument();
     expect(screen.queryByText('朝ヨガ')).toBeNull();
     await user.click(screen.getByRole('tab', { name: /朝要因/ }));
