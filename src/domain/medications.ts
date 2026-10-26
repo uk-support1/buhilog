@@ -7,6 +7,13 @@ import type { DailyEntry, Medication, Problem } from './types';
 export const DOSE_OPTIONS = [0, 12.5, 25, 37.5, 50] as const;
 export const DOSE_UNIT = 'mg';
 
+/** トラゾドンは、25mg錠を 1/4・1/3・1と1/4・1と1/3 に分けて飲むことがあるため、その量も選べる（mgに直して小数2桁） */
+const EXTRA_DOSES: Record<string, number[]> = { トラゾドン: [6.25, 8.33, 31.25, 33.33] };
+const DOSE_NOTE: Record<string, string> = { '6.25': '1/4錠', '8.33': '1/3錠', '31.25': '1と1/4錠', '33.33': '1と1/3錠' };
+export const doseOptionsFor = (name: string): number[] =>
+  [...DOSE_OPTIONS, ...(EXTRA_DOSES[name] ?? [])].sort((a, b) => a - b);
+export const doseNote = (name: string, v: string): string => (name in EXTRA_DOSES ? DOSE_NOTE[v] ?? '' : '');
+
 interface Def {
   name: string;
   kind: 'dose' | 'taken';

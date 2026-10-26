@@ -4,7 +4,7 @@ import { formatJa, isValidLocalDate, toLocalDate } from '../domain/date';
 import { BULK_NOT_DONE_GROUPS, buildGroups, hasNamedGroups } from '../domain/groups';
 import { pairedApproachIds, SIGN_GROUP, SIGN_INTRO } from '../domain/signs';
 import { AWAKE_LABELS, DEFAULT_BEDTIME, DEFAULT_WAKETIME, awakeningTotal, totalSleepHours, nightHours } from '../domain/sleep';
-import { DOSE_OPTIONS } from '../domain/medications';
+import { doseOptionsFor, doseNote } from '../domain/medications';
 import type { Approach, ApproachStatus, Medication, Problem } from '../domain/types';
 import { Buhio } from '../ui/Buhio';
 import { PROBLEM_SCALE_LABEL } from '../domain/scale';
@@ -211,14 +211,14 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
   const setMed = (id: string, v: string) => edit((f) => ({ ...f, meds: { ...f.meds, [id]: v } }));
   const doseRow = (m: Medication) => {
     const cur = form.meds[m.id] ?? '';
-    const opts = (DOSE_OPTIONS as readonly number[]).map(String);
+    const opts = doseOptionsFor(m.name).map(String);
     if (cur !== '' && !opts.includes(cur)) opts.push(cur); // 一覧にない過去の量も、そのまま選べる
     return (
       <label className="medrow" key={m.id}>
         <span>{m.name}{m.baseDose != null && <small className="muted"> 基本 {m.baseDose}{m.unit ?? 'mg'}</small>}</span>
         <select aria-label={`${m.name}の量`} value={cur} onChange={(e) => setMed(m.id, e.target.value)}>
           <option value="">未入力</option>
-          {opts.map((o) => <option key={o} value={o}>{Number(o) === 0 ? '0 mg（飲まなかった）' : `${o} ${m.unit ?? 'mg'}`}</option>)}
+          {opts.map((o) => <option key={o} value={o}>{Number(o) === 0 ? '0 mg（飲まなかった）' : `${o} ${m.unit ?? 'mg'}${doseNote(m.name, o) ? `（${doseNote(m.name, o)}）` : ''}`}</option>)}
         </select>
       </label>
     );

@@ -73,3 +73,11 @@ describe('eventsOn / eventsInRange', () => {
     expect([...m.keys()].sort()).toEqual(['2026-11-02', '2026-11-09', '2026-11-23', '2026-11-30']);
   });
 });
+
+import { doseOptionsFor } from '../src/domain/medications';
+describe('トラゾドンの量', () => {
+  it('分数の量も選べて、他の薬は増えない', () => {
+    expect(doseOptionsFor('トラゾドン')).toEqual([0, 6.25, 8.33, 12.5, 25, 31.25, 33.33, 37.5, 50]);
+    expect(doseOptionsFor('セルトラリン')).toEqual([0, 12.5, 25, 37.5, 50]);
+  });
+});
