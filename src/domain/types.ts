@@ -59,6 +59,8 @@ export const DailyEntrySchema = z.object({
   problemRatings: z.record(z.string(), problemRating.nullable()),
   problemNotes: z.record(z.string(), z.string().max(MAX_TEXT)),
   approachStatuses: z.record(z.string(), ApproachStatusSchema),
+  /** 服薬の記録。medicationId → 量(mg)、または 飲んだ=1／飲まなかった=0。未入力はキーなし */
+  medIntake: z.record(z.string(), z.number().min(0).max(1000)).optional(),
   /** 実施した項目の量（杯・回数など）。approachId → 数 */
   approachQuantities: z.record(z.string(), z.number().int().min(1).max(9999)).optional(),
   /** 合計睡眠時間（夜＋昼寝）。就寝・起床があれば自動計算した値を保存 */
@@ -79,6 +81,27 @@ export const DailyEntrySchema = z.object({
 });
 export type DailyEntry = z.infer<typeof DailyEntrySchema>;
 
+/**
+ * 服薬の項目（記録のみ。分析・提案には使わない）。
+ *  - kind 'dose': 量（mg）を選ぶ（0＝飲まなかった）。baseDose は「すべて飲んだ」で入る基本量。
+ *  - kind 'taken': 飲んだ（1）／飲まなかった（0）。linkedProblemId があれば、その困りごとの欄に表示（例: 頭痛の頓服）。
+ */
+export const MedicationSchema = z.object({
+  id,
+  name: z.string().trim().min(1).max(MAX_NAME),
+  kind: z.enum(['dose', 'taken']),
+  unit: z.string().max(10).optional(),
+  baseDose: z.number().min(0).max(1000).optional(),
+  group: z.string().trim().max(MAX_NAME).optional(),
+  section: z.string().trim().max(MAX_NAME).optional(),
+  linkedProblemId: z.string().min(1).max(64).optional(),
+  order: z.number().int(),
+  archivedAt: ts.optional(),
+  createdAt: ts,
+  updatedAt: ts,
+});
+export type Medication = z.infer<typeof MedicationSchema>;
+
 export const AppSettingsSchema = z.object({
   schemaVersion: z.number().int(),
   onboardingCompleted: z.boolean(),
@@ -93,7 +116,7 @@ export const AppSettingsSchema = z.object({
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: SCHEMA_VERSION,
   onboardingCompleted: false,

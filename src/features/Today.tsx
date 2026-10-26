@@ -4,7 +4,8 @@ import { formatJa, isValidLocalDate, toLocalDate } from '../domain/date';
 import { BULK_NOT_DONE_GROUPS, buildGroups, hasNamedGroups } from '../domain/groups';
 import { pairedApproachIds, SIGN_GROUP, SIGN_INTRO } from '../domain/signs';
 import { AWAKE_LABELS, DEFAULT_BEDTIME, DEFAULT_WAKETIME, awakeningTotal, totalSleepHours, nightHours } from '../domain/sleep';
-import type { Approach, ApproachStatus, Problem } from '../domain/types';
+import { DOSE_OPTIONS } from '../domain/medications';
+import type { Approach, ApproachStatus, Medication, Problem } from '../domain/types';
 import { Buhio } from '../ui/Buhio';
 import { PROBLEM_SCALE_LABEL } from '../domain/scale';
 import { ScoreInput } from '../ui/ScoreInput';
@@ -21,6 +22,8 @@ interface Form {
   awake: string[];
   /** 実施した項目の量（杯・回数）。approachId → 入力文字 */
   quantities: Record<string, string>;
+  /** 服薬（medicationId → 量(mg) または 1=飲んだ/0=飲まなかった。空=未入力） */
+  meds: Record<string, string>;
   /** ストレスは画面から外したが、過去データは保持する */
   stress: number | null;
   noteEvents: string;
@@ -30,7 +33,7 @@ interface Form {
 // 就寝・起床は未入力から始める。23:00 / 7:00 は「初期値の表示」（選択画面の開始位置）で、触るまでは入力済みにしない
 const emptyForm = (): Form => ({
   ratings: {}, notes: {}, statuses: {}, sleep: '', bed: '', wake: '', nap: '',
-  awake: Array(5).fill(''), quantities: {}, stress: null, noteEvents: '', noteInsights: '', noteOther: '',
+  awake: Array(5).fill(''), quantities: {}, meds: {}, stress: null, noteEvents: '', noteInsights: '', noteOther: '',
 });
 
 const STATUS_LABEL: Record<ApproachStatus, string> = { done: '実施した', not_done: '実施しなかった', unknown: '未回答' };
@@ -42,6 +45,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
   const [date, setDate] = useState(initialDate ?? toLocalDate());
   const [problems, setProblems] = useState<Problem[]>([]);
   const [approaches, setApproaches] = useState<Approach[]>([]);
+  const [medications, setMedications] = useState<Medication[]>([]);
   const [groupOrder, setGroupOrder] = useState<string[]>([]);
   const [form, setForm] = useState<Form>(emptyForm());
   const [existing, setExisting] = useState(false);
@@ -55,10 +59,11 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
   useEffect(() => {
     let live = true;
     (async () => {
-      const [ps, as, e, st] = await Promise.all([repo.listProblems(), repo.listApproaches(), repo.getEntry(date), repo.getSettings()]);
+      const [ps, as, e, st, ms] = await Promise.all([repo.listProblems(), repo.listApproaches(), repo.getEntry(date), repo.getSettings(), repo.listMedications()]);
       if (!live) return;
       setProblems(ps);
       setApproaches(as);
+      setMedications(ms);
       setGroupOrder(st.groupOrder ?? []);
       setExisting(!!e);
       setForm(
@@ -73,6 +78,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
               nap: e.napHours != null ? String(e.napHours) : '',
               awake: Array.from({ length: 5 }, (_, i) => (e.awakenings?.[i] != null ? String(e.awakenings[i]) : '')),
               quantities: Object.fromEntries(Object.entries(e.approachQuantities ?? {}).map(([k, v]) => [k, String(v)])),
+              meds: Object.fromEntries(Object.entries(e.medIntake ?? {}).map(([k, v]) => [k, String(v)])),
               stress: e.stressRating ?? null,
               noteEvents: e.noteEvents ?? '',
               noteInsights: e.noteInsights ?? '',
@@ -128,6 +134,14 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
       if (!Number.isInteger(n) || n < 1 || n > 9999) { setErr(`「${a.name}」の量は、1以上の整数で入力してください。`); return; }
       quantities[a.id] = n;
     }
+    const medIntake: Record<string, number> = {};
+    for (const m of medications) {
+      const raw = form.meds[m.id];
+      if (raw === undefined || raw === '') continue;
+      const v = Number(raw);
+      if (!Number.isFinite(v) || v < 0 || v > 1000) { setErr(`「${m.name}」の量が正しくありません。`); return; }
+      medIntake[m.id] = v;
+    }
     try {
       await repo.saveEntry({
         localDate: date,
@@ -135,6 +149,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
         problemNotes: Object.fromEntries(Object.entries(form.notes).filter(([, v]) => v.trim() !== '')),
         approachStatuses: form.statuses,
         approachQuantities: Object.keys(quantities).length ? quantities : undefined,
+        medIntake: Object.keys(medIntake).length ? medIntake : undefined,
         sleepHours: sleepNum,
         bedtime: form.bed || undefined,
         wakeTime: form.wake || undefined,
@@ -164,6 +179,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
         onChange={(v) => edit((f) => ({ ...f, ratings: { ...f.ratings, [p.id]: v } }))}
       />
       {approachOf(p.pairedApproachId) && practiceRow(approachOf(p.pairedApproachId)!)}
+      {rescueChips(p)}
       {p.noteAlways ? (
         <label className="field">
           {p.noteLabel ?? 'メモ'}
@@ -189,6 +205,70 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
       )}
     </div>
   );
+
+  // ---- 服薬（記録のみ。分析・提案には使わない） ----
+  const setMed = (id: string, v: string) => edit((f) => ({ ...f, meds: { ...f.meds, [id]: v } }));
+  const doseRow = (m: Medication) => {
+    const cur = form.meds[m.id] ?? '';
+    const opts = (DOSE_OPTIONS as readonly number[]).map(String);
+    if (cur !== '' && !opts.includes(cur)) opts.push(cur); // 一覧にない過去の量も、そのまま選べる
+    return (
+      <label className="medrow" key={m.id}>
+        <span>{m.name}{m.baseDose != null && <small className="muted"> 基本 {m.baseDose}{m.unit ?? 'mg'}</small>}</span>
+        <select aria-label={`${m.name}の量`} value={cur} onChange={(e) => setMed(m.id, e.target.value)}>
+          <option value="">未入力</option>
+          {opts.map((o) => <option key={o} value={o}>{Number(o) === 0 ? '0 mg（飲まなかった）' : `${o} ${m.unit ?? 'mg'}`}</option>)}
+        </select>
+      </label>
+    );
+  };
+  const takenRow = (m: Medication) => (
+    <div role="radiogroup" aria-label={m.name} className="approach-row" key={m.id}>
+      <div className="name">{m.name}</div>
+      <div className="seg">
+        {([['1', '飲んだ'], ['0', '飲まなかった'], ['', '未回答']] as const).map(([v, label]) => (
+          <button key={v} type="button" role="radio" aria-checked={(form.meds[m.id] ?? '') === v} className={(form.meds[m.id] ?? '') === v ? 'sel' : ''} onClick={() => setMed(m.id, v)}>{label}</button>
+        ))}
+      </div>
+    </div>
+  );
+  /** グループの「服薬」カード（困りごとに紐づく頓服は、その困りごとの欄に出すのでここには出さない） */
+  const medsCard = (groupName: string | null) => {
+    const list = medications.filter((m) => !m.linkedProblemId && (groupName === null || m.group === groupName));
+    if (list.length === 0) return null;
+    return (
+      <section className="card" key={`meds-${groupName ?? 'all'}`} aria-label="服薬">
+        <h2>{list[0].section ?? '服薬'}</h2>
+        <p className="muted small">記録だけの欄です。量は、選んで変えられます。</p>
+        {list.length >= 2 && (
+          <button
+            type="button"
+            className="bulk"
+            onClick={() => edit((f) => ({ ...f, meds: { ...f.meds, ...Object.fromEntries(list.map((m) => [m.id, m.kind === 'dose' ? String(m.baseDose ?? 0) : '1'])) } }))}
+          >
+            すべて飲んだ（基本の量を入れる）
+          </button>
+        )}
+        {list.map((m) => (m.kind === 'dose' ? doseRow(m) : takenRow(m)))}
+      </section>
+    );
+  };
+  /** 困りごとに紐づく頓服（例: 頭痛のために日中に飲んだ薬）。押すと「飲んだ」、もう一度押すと外れる */
+  const rescueChips = (p: Problem) => {
+    const list = medications.filter((m) => m.linkedProblemId === p.id);
+    if (list.length === 0) return null;
+    return (
+      <div role="group" aria-label={`${p.name}のために日中に飲んだ薬`} className="rescue">
+        <span className="plabel">日中に飲んだ薬（{p.name}のため）</span>
+        <div className="seg">
+          {list.map((m) => {
+            const on = form.meds[m.id] === '1';
+            return <button key={m.id} type="button" aria-pressed={on} className={on ? 'sel' : ''} onClick={() => setMed(m.id, on ? '' : '1')}>{m.name}</button>;
+          })}
+        </div>
+      </div>
+    );
+  };
 
   /** 未回答のものだけを、まとめて「実施しなかった」にする（「実施した」にしたものは変えない） */
   const bulkButton = (list: Approach[]) => {
@@ -359,6 +439,9 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
     const as = g.sections.flatMap((s) => s.approaches);
     let filled = ps.filter((p) => form.ratings[p.id] != null).length + as.filter((a) => (form.statuses[a.id] ?? 'unknown') !== 'unknown').length;
     let total = ps.length + as.length;
+    const gm = medications.filter((m) => !m.linkedProblemId && m.group === g.name);
+    total += gm.length;
+    filled += gm.filter((m) => (form.meds[m.id] ?? '') !== '').length;
     if (g.name === '睡眠') {
       // 睡眠タブの入力欄（就寝・起床・中途覚醒）も数える。昼寝は「しない日」が多いので数えない
       total += 3;
@@ -412,6 +495,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
                       {s.approaches.filter((a) => !paired.has(a.id)).map(approachBlock)}
                     </section>
                   )),
+                  medsCard(g.name),
                 ])}
         </>
       ) : (
@@ -429,6 +513,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
               {approaches.filter((a) => !paired.has(a.id)).map(approachBlock)}
             </section>
           )}
+          {medsCard(null)}
           {!detail && (
             <button type="button" className="more" onClick={() => setDetail(true)}>
               ＋ くわしく入力する（睡眠・メモ）

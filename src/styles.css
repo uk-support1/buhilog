@@ -127,3 +127,7 @@ details.card > summary { cursor:pointer; min-height:36px; display:flex; align-it
 select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthint { margin:4px 0 8px; } .ghosthint button { width:100%; }
 .bulk { width:100%; margin:6px 0 10px; background:var(--sky); border-color:#bfe0f7; color:var(--sky-fg); font-weight:700; }
 .time select { width:100%; min-width:0; display:block; padding-left:12px; padding-right:8px; } .time select + select { margin-left:0; }
+
+/* 服薬 */
+.medrow { display:grid; grid-template-columns:1fr 150px; align-items:center; gap:8px; min-height:48px; border-bottom:1px dotted var(--line); } .medrow small { display:block; }
+.rescue { margin:8px 0 4px; padding:8px 10px; border-radius:14px; background:#eef6ff; } .rescue .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:700; }
