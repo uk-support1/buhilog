@@ -1,7 +1,7 @@
 import { db, type BuhiLogDB } from './db';
 import {
   AppSettingsSchema, ApproachSchema, DailyEntrySchema, DEFAULT_SETTINGS, ProblemSchema,
-  type AppSettings, type Approach, type DailyEntry, type Problem,
+  type AppSettings, type Approach, type DailyEntry, type Medication, type Problem,
 } from '../domain/types';
 
 const newId = () => crypto.randomUUID();
@@ -104,6 +104,12 @@ export function createRepo(d: BuhiLogDB = db) {
       await d.dailyEntries.where('localDate').equals(localDate).delete();
     },
 
+    // ---- 服薬の項目（記録のみ） ----
+    async listMedications(includeArchived = false): Promise<Medication[]> {
+      const all = (await d.medications.toArray()).sort((a, b) => a.order - b.order);
+      return includeArchived ? all : all.filter((m) => !m.archivedAt);
+    },
+
     // ---- 設定 ----
     async getSettings(): Promise<AppSettings> {
       const row = await d.settings.get('app');
@@ -122,8 +128,8 @@ export function createRepo(d: BuhiLogDB = db) {
 
     /** 全件削除（設定画面から二重確認のうえ呼ぶ） */
     async wipeAll() {
-      await d.transaction('rw', [d.problems, d.approaches, d.dailyEntries, d.settings], async () => {
-        await Promise.all([d.problems.clear(), d.approaches.clear(), d.dailyEntries.clear(), d.settings.clear()]);
+      await d.transaction('rw', [d.problems, d.approaches, d.dailyEntries, d.settings, d.medications], async () => {
+        await Promise.all([d.problems.clear(), d.approaches.clear(), d.dailyEntries.clear(), d.settings.clear(), d.medications.clear()]);
       });
     },
   };

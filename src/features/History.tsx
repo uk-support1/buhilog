@@ -3,7 +3,7 @@ import type { Repo } from '../db/repo';
 import { addDays, formatJa, toLocalDate } from '../domain/date';
 import { buildGroups } from '../domain/groups';
 import { groupProgress, shortGroupName } from '../domain/progress';
-import type { Approach, DailyEntry, Problem } from '../domain/types';
+import type { Approach, DailyEntry, Medication, Problem } from '../domain/types';
 
 const PAGE_DAYS = 14;
 
@@ -11,12 +11,14 @@ export function History({ repo, onEdit }: { repo: Repo; onEdit: (date: string) =
   const [entries, setEntries] = useState<Map<string, DailyEntry>>(new Map());
   const [problems, setProblems] = useState<Problem[]>([]);
   const [approaches, setApproaches] = useState<Approach[]>([]);
+  const [medications, setMedications] = useState<Medication[]>([]);
   const [groupOrder, setGroupOrder] = useState<string[]>([]);
   const [shown, setShown] = useState(PAGE_DAYS);
   const reload = useCallback(async () => {
     setEntries(new Map((await repo.listEntries()).map((e) => [e.localDate, e])));
     setProblems(await repo.listProblems());
     setApproaches(await repo.listApproaches());
+    setMedications(await repo.listMedications());
     setGroupOrder((await repo.getSettings()).groupOrder ?? []);
   }, [repo]);
   useEffect(() => { void reload(); }, [reload]);
@@ -30,7 +32,7 @@ export function History({ repo, onEdit }: { repo: Repo; onEdit: (date: string) =
 
   const row = (d: string) => {
     const e = entries.get(d);
-    const prog = e ? groupProgress(e, groups) : [];
+    const prog = e ? groupProgress(e, groups, medications) : [];
     return (
       <li key={d} className={`hrow${e ? '' : ' empty'}`}>
         <div className="hmain">

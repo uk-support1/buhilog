@@ -31,7 +31,7 @@ describe('困りごとの点数スケール（旧0〜10 → 新1〜5、5が良�
     const repo = createRepo(db);
     expect((await repo.listEntries()).map((e) => e.problemRatings.p1)).toEqual([5, 4, 2, 1, null]);
     expect((await repo.listProblems())[0].description).toBe('深さ（5＝よく眠れた）');
-    expect((await repo.getSettings()).schemaVersion).toBe(5); // v1 → v5 まで順に移行される
+    expect((await repo.getSettings()).schemaVersion).toBe(6); // v1 → v6 まで順に移行される
     db.close();
     // 再度開いても二重に変換されない
     const again = new BuhiLogDB('legacy-scale');
@@ -51,7 +51,7 @@ describe('困りごとの点数スケール（旧0〜10 → 新1〜5、5が良�
     if (!r.ok) return;
     expect(r.backup.dailyEntries[0].problemRatings.p1).toBe(2);
     expect(r.backup.formatVersion).toBe(2);
-    expect(r.backup.settings.schemaVersion).toBe(5);
+    expect(r.backup.settings.schemaVersion).toBe(6);
     // 新形式は変換されない（二重変換の防止）
     const db = new BuhiLogDB('scale-new');
     const repo = createRepo(db);

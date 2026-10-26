@@ -2,7 +2,8 @@ import Dexie, { type Table } from 'dexie';
 import { legacyRatingToNew } from '../domain/scale';
 import { convertDayFactors } from '../domain/dayFactors';
 import { ensureVitalitySigns } from '../domain/signs';
-import type { AppSettings, Approach, DailyEntry, Problem } from '../domain/types';
+import { ensureMedications } from '../domain/medications';
+import type { AppSettings, Approach, DailyEntry, Medication, Problem } from '../domain/types';
 
 type SettingsRow = AppSettings & { key: 'app' };
 
@@ -11,6 +12,7 @@ export class BuhiLogDB extends Dexie {
   approaches!: Table<Approach, string>;
   dailyEntries!: Table<DailyEntry, string>;
   settings!: Table<SettingsRow, string>;
+  medications!: Table<Medication, string>;
 
   constructor(name = 'buhilog') {
     super(name);
@@ -95,6 +97,23 @@ export class BuhiLogDB extends Dexie {
           await tx.table('dailyEntries').bulkPut(r.entries);
         }
         await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 5; });
+      });
+    // v6: 服薬の記録（クービビック・セルトラリン・トラゾドン・コンサータ・頭痛の頓服）。メモに文字で残っていた服薬を、読み取れた分だけ移す。
+    this.version(6)
+      .stores({
+        problems: 'id, order, archivedAt',
+        approaches: 'id, archivedAt',
+        dailyEntries: 'id, &localDate',
+        settings: 'key',
+        medications: 'id, order, archivedAt',
+      })
+      .upgrade(async (tx) => {
+        const r = ensureMedications(await tx.table('problems').toArray(), await tx.table('medications').toArray(), await tx.table('dailyEntries').toArray(), () => crypto.randomUUID(), Date.now());
+        if (r.changed) {
+          await tx.table('medications').bulkPut(r.medications);
+          await tx.table('dailyEntries').bulkPut(r.entries);
+        }
+        await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 6; });
       });
   }
 }

@@ -87,7 +87,7 @@ describe('旧データの引き継ぎ（DB v4 → v5 / バックアップ）', (
     expect(e2?.problemRatings).toEqual({ p0: 2, [multi.id]: 2 });
     expect(e1?.approachStatuses).toEqual({ y: 'done' }); // 朝ヨガは変わらない
     expect(e2?.approachStatuses).toEqual({ y: 'not_done' });
-    expect((await repo.getSettings()).schemaVersion).toBe(5);
+    expect((await repo.getSettings()).schemaVersion).toBe(6);
     expect((await repo.listApproaches(true)).find((a) => a.id === 'm')?.archivedAt).toBeTruthy();
   });
 
