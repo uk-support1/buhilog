@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../src/domain/types';
 import Dexie from 'dexie';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -79,7 +80,7 @@ describe('旧データの引き継ぎ（DB v5 → v6 / バックアップ）', (
     expect(e?.problemRatings).toEqual({ p1: 4 });
     expect(e?.medIntake).toEqual({ [meds.find((m) => m.name === 'セルトラリン')!.id]: 50 });
     expect(e?.noteOther).toBeUndefined();
-    expect((await repo.getSettings()).schemaVersion).toBe(6);
+    expect((await repo.getSettings()).schemaVersion).toBe(SCHEMA_VERSION);
   });
 
   it('バックアップの往復で服薬の項目と記録が保たれ、CSVにも出る。存在しない薬を指す記録は拒否する', async () => {

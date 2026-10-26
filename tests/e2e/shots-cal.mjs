@@ -1,0 +1,25 @@
+// カレンダーと「今日の予定」の見た目確認（架空データのみ）: node tests/e2e/shots-cal.mjs <出力ディレクトリ> <架空バックアップJSON>
+import { chromium } from 'playwright-core';
+import { spawn } from 'node:child_process';
+const [out = '.', json] = process.argv.slice(2);
+const srv = spawn('npx', ['vite', 'preview', '--port', '4184', '--strictPort'], { stdio: 'ignore' });
+await new Promise((r) => setTimeout(r, 2500));
+const b = await chromium.launch({ executablePath: process.env.CHROMIUM, args: ['--no-sandbox'] });
+const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, locale: 'ja-JP' });
+const p = await ctx.newPage();
+p.on('dialog', (d) => d.accept());
+await p.goto('http://localhost:4184/buhilog/');
+await p.getByRole('button', { name: 'はじめる' }).click();
+await p.getByRole('button', { name: '後で登録する' }).click();
+await p.getByRole('button', { name: '設定' }).click();
+await p.locator('input[type=file]').setInputFiles(json);
+await p.getByRole('button', { name: 'この内容で置き換える' }).click();
+await p.getByRole('region', { name: '今日の予定' }).waitFor();
+await p.screenshot({ path: `${out}/23-today-events.png` });
+await p.getByRole('button', { name: '予定' }).click();
+await p.getByRole('grid').waitFor();
+await p.screenshot({ path: `${out}/24-calendar.png` });
+await p.getByRole('button', { name: /この日に予定を追加/ }).click();
+await p.getByRole('region', { name: '予定を追加' }).evaluate((el) => el.scrollIntoView({ block: 'start' }));
+await p.screenshot({ path: `${out}/25-event-form.png` });
+await b.close(); srv.kill();

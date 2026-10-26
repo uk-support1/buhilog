@@ -131,3 +131,20 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 /* 服薬 */
 .medrow { display:grid; grid-template-columns:1fr 150px; align-items:center; gap:8px; min-height:48px; border-bottom:1px dotted var(--line); } .medrow small { display:block; }
 .rescue { margin:8px 0 4px; padding:8px 10px; border-radius:14px; background:#eef6ff; } .rescue .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:700; }
+
+/* 予定（カレンダー・今日の予定） */
+.events { background:linear-gradient(180deg,#f2f9ff,#fff); border-color:#bfe0f7; } .events h2 { border-left-color:#3aa0e0; }
+.evrow { display:flex; gap:10px; align-items:flex-start; } .evtime { flex:0 0 96px; font-weight:700; color:var(--sky-fg); font-size:.9rem; padding-top:2px; } .evmain { flex:1; min-width:0; display:flex; flex-direction:column; } .evmemo { display:block; white-space:pre-wrap; }
+.calhead { display:flex; align-items:center; gap:6px; } .calhead h2 { flex:1; text-align:center; margin:0; border:0; padding:0; } .calhead button { min-width:44px; }
+.calgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin:8px 0; } .calgrid .wd { text-align:center; font-weight:700; font-size:.8rem; color:var(--muted); } .wd0 { color:#c0392b !important; } .wd6 { color:#2a78c2 !important; }
+.day { position:relative; min-height:54px; padding:2px; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:1px; background:#fff; border:2px solid transparent; }
+.day.out { opacity:.4; } .day.today { border-color:var(--accent); } .day.sel { background:var(--accent-soft); box-shadow:0 0 0 2px var(--accent); }
+.day .num { font-weight:700; font-size:.95rem; } .day .dots { display:flex; gap:2px; align-items:center; min-height:10px; font-size:.7rem; color:var(--sky-fg); } .day .dots i { width:7px; height:7px; border-radius:50%; background:#3aa0e0; display:inline-block; }
+.day .rec { position:absolute; right:3px; top:1px; font-size:.65rem; color:var(--ok); font-weight:800; }
+.evform .check { margin:4px 0; }
+/* メニューが4つになったので、文字を少し小さくして、折り返さない */
+.tabs button { white-space:nowrap; font-size:.92rem; padding-left:2px; padding-right:2px; }
+/* 選んだ日: 数字が見えるように */
+.day.sel { color:var(--fg); } .day.sel .num { color:var(--accent); font-size:1.05rem; } .day.sel .dots { color:var(--sky-fg); }
+/* 2列の入力欄が、画面の幅からはみ出さないように */
+.two > * { min-width:0; } .two input[type=date] { min-width:0; width:100%; font-size:.92rem; padding-left:8px; padding-right:6px; }

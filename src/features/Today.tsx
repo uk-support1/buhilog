@@ -10,6 +10,7 @@ import { Buhio } from '../ui/Buhio';
 import { PROBLEM_SCALE_LABEL } from '../domain/scale';
 import { ScoreInput } from '../ui/ScoreInput';
 import { TimeSelect } from '../ui/TimeSelect';
+import { TodayEvents } from './TodayEvents';
 
 interface Form {
   ratings: Record<string, number | null>;
@@ -40,7 +41,7 @@ const STATUS_LABEL: Record<ApproachStatus, string> = { done: '実施した', not
 const PRACTICE_LABEL: Record<ApproachStatus, string> = { done: '意識した', not_done: '意識しなかった', unknown: '未回答' };
 const MEMO_TAB = '__memo__';
 
-export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string }) {
+export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initialDate?: string; onOpenCalendar?: (date: string) => void }) {
   // 日付は入力開始時（画面を開いた時点）に確定し、保存前に変更できる
   const [date, setDate] = useState(initialDate ?? toLocalDate());
   const [problems, setProblems] = useState<Problem[]>([]);
@@ -452,6 +453,7 @@ export function Today({ repo, initialDate }: { repo: Repo; initialDate?: string 
 
   return (
     <div>
+      {onOpenCalendar && <TodayEvents repo={repo} date={date} onOpen={onOpenCalendar} />}
       <section className="card">
         <label className="field">
           記録する日

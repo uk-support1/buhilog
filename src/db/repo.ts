@@ -1,7 +1,7 @@
 import { db, type BuhiLogDB } from './db';
 import {
-  AppSettingsSchema, ApproachSchema, DailyEntrySchema, DEFAULT_SETTINGS, ProblemSchema,
-  type AppSettings, type Approach, type DailyEntry, type Medication, type Problem,
+  AppSettingsSchema, EventSchema, ApproachSchema, DailyEntrySchema, DEFAULT_SETTINGS, ProblemSchema,
+  type AppSettings, type Approach, type CalendarEvent, type DailyEntry, type Medication, type Problem,
 } from '../domain/types';
 
 const newId = () => crypto.randomUUID();
@@ -110,6 +110,22 @@ export function createRepo(d: BuhiLogDB = db) {
       return includeArchived ? all : all.filter((m) => !m.archivedAt);
     },
 
+    // ---- 予定（カレンダー） ----
+    async listEvents(): Promise<CalendarEvent[]> {
+      return (await d.events.toArray()).sort((a, b) => a.date.localeCompare(b.date) || (a.startTime ?? '').localeCompare(b.startTime ?? ''));
+    },
+    /** id があれば更新、なければ新規。検証に通らなければ例外 */
+    async saveEvent(input: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<CalendarEvent> {
+      return d.transaction('rw', d.events, async () => {
+        const cur = input.id ? await d.events.get(input.id) : undefined;
+        const now = Date.now();
+        const e = EventSchema.parse({ ...input, id: cur?.id ?? input.id ?? newId(), createdAt: cur?.createdAt ?? now, updatedAt: now });
+        await d.events.put(e);
+        return e;
+      });
+    },
+    async deleteEvent(id: string) { await d.events.delete(id); },
+
     // ---- 設定 ----
     async getSettings(): Promise<AppSettings> {
       const row = await d.settings.get('app');
@@ -128,8 +144,8 @@ export function createRepo(d: BuhiLogDB = db) {
 
     /** 全件削除（設定画面から二重確認のうえ呼ぶ） */
     async wipeAll() {
-      await d.transaction('rw', [d.problems, d.approaches, d.dailyEntries, d.settings, d.medications], async () => {
-        await Promise.all([d.problems.clear(), d.approaches.clear(), d.dailyEntries.clear(), d.settings.clear(), d.medications.clear()]);
+      await d.transaction('rw', [d.problems, d.approaches, d.dailyEntries, d.settings, d.medications, d.events], async () => {
+        await Promise.all([d.problems.clear(), d.approaches.clear(), d.dailyEntries.clear(), d.settings.clear(), d.medications.clear(), d.events.clear()]);
       });
     },
   };

@@ -4,13 +4,14 @@ import { Today } from './features/Today';
 import { Manage } from './features/Manage';
 import { History } from './features/History';
 import { Review } from './features/Review';
+import { Calendar } from './features/Calendar';
 import { Settings } from './features/Settings';
 import { BackupReminder } from './features/BackupReminder';
 import { Welcome } from './features/Welcome';
 import { UpdateBanner } from './ui/UpdateBanner';
 import { Buhio } from './ui/Buhio';
 
-type Tab = 'record' | 'review' | 'settings';
+type Tab = 'record' | 'calendar' | 'review' | 'settings';
 type Sub = 'today' | 'history' | 'manage';
 
 export function App() {
@@ -20,6 +21,7 @@ export function App() {
   const [sub, setSub] = useState<Sub>('today');
   const [editDate, setEditDate] = useState<string | undefined>();
   const [key, setKey] = useState(0);
+  const [calDate, setCalDate] = useState<string | undefined>();
 
   useEffect(() => {
     void repo.getSettings().then((s) => { setOnboarded(s.onboardingCompleted); setReady(true); });
@@ -41,17 +43,18 @@ export function App() {
                 <button key={s} className={sub === s ? 'sel' : ''} onClick={() => { setSub(s); if (s === 'today') setEditDate(undefined); setKey((k) => k + 1); }}>{l}</button>
               ))}
             </nav>
-            {sub === 'today' && <Today key={`${key}-${editDate ?? ''}`} repo={repo} initialDate={editDate} />}
+            {sub === 'today' && <Today key={`${key}-${editDate ?? ''}`} repo={repo} initialDate={editDate} onOpenCalendar={(d) => { setCalDate(d); setTab('calendar'); }} />}
             {sub === 'history' && <History repo={repo} onEdit={(d) => { setEditDate(d); setSub('today'); }} />}
             {sub === 'manage' && <Manage repo={repo} />}
           </>
         )}
+        {tab === 'calendar' && <Calendar key={calDate ?? 'cal'} repo={repo} initialDate={calDate} onPick={(d) => { setEditDate(d); setSub('today'); setTab('record'); setKey((k) => k + 1); }} />}
         {tab === 'review' && <Review repo={repo} />}
         {tab === 'settings' && <Settings repo={repo} onRestored={() => { setOnboarded(true); setKey((k) => k + 1); setTab('record'); setSub('today'); }} onWiped={() => { setOnboarded(false); setTab('record'); setSub('today'); }} />}
       </main>
       <nav className="tabs" aria-label="メインメニュー">
-        {([['record', '記録'], ['review', 'ふりかえり'], ['settings', '設定']] as [Tab, string][]).map(([t, l]) => (
-          <button key={t} className={tab === t ? 'sel' : ''} aria-current={tab === t ? 'page' : undefined} onClick={() => setTab(t)}>{l}</button>
+        {([['record', '記録'], ['calendar', '予定'], ['review', 'ふりかえり'], ['settings', '設定']] as [Tab, string][]).map(([t, l]) => (
+          <button key={t} className={tab === t ? 'sel' : ''} aria-current={tab === t ? 'page' : undefined} onClick={() => { if (t === 'calendar') setCalDate(undefined); setTab(t); }}>{l}</button>
         ))}
       </nav>
     </div>
