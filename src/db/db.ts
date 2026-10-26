@@ -3,7 +3,7 @@ import { legacyRatingToNew } from '../domain/scale';
 import { convertDayFactors } from '../domain/dayFactors';
 import { ensureVitalitySigns } from '../domain/signs';
 import { ensureMedications } from '../domain/medications';
-import type { AppSettings, Approach, DailyEntry, Medication, Problem } from '../domain/types';
+import type { AppSettings, Approach, CalendarEvent, DailyEntry, Medication, Problem } from '../domain/types';
 
 type SettingsRow = AppSettings & { key: 'app' };
 
@@ -13,6 +13,7 @@ export class BuhiLogDB extends Dexie {
   dailyEntries!: Table<DailyEntry, string>;
   settings!: Table<SettingsRow, string>;
   medications!: Table<Medication, string>;
+  events!: Table<CalendarEvent, string>;
 
   constructor(name = 'buhilog') {
     super(name);
@@ -114,6 +115,19 @@ export class BuhiLogDB extends Dexie {
           await tx.table('dailyEntries').bulkPut(r.entries);
         }
         await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 6; });
+      });
+    // v7: 予定（カレンダー）。新しい表を足すだけで、既存の記録には触れない。
+    this.version(7)
+      .stores({
+        problems: 'id, order, archivedAt',
+        approaches: 'id, archivedAt',
+        dailyEntries: 'id, &localDate',
+        settings: 'key',
+        medications: 'id, order, archivedAt',
+        events: 'id, date',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 7; });
       });
   }
 }

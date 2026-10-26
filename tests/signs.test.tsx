@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../src/domain/types';
 import Dexie from 'dexie';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -60,7 +61,7 @@ describe('旧データの引き継ぎ（DB v3 → v4 / バックアップ）', (
     expect(ps.find((p) => p.id === 'p1')).toMatchObject({ name: '頭痛', group: '困りごと' });
     expect((await repo.getEntry('2026-05-01'))?.problemRatings).toEqual({ p1: 4, p2: 3 });
     expect((await repo.getSettings()).groupOrder).toEqual(['日中要因', SIGN_GROUP, '困りごと']);
-    expect((await repo.getSettings()).schemaVersion).toBe(6);
+    expect((await repo.getSettings()).schemaVersion).toBe(SCHEMA_VERSION);
   });
 
   it('旧いバックアップを読み込むときも、サインが加わる', () => {

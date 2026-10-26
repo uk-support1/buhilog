@@ -102,6 +102,41 @@ export const MedicationSchema = z.object({
 });
 export type Medication = z.infer<typeof MedicationSchema>;
 
+/** 予定（カレンダー）。繰り返しは、設定から日ごとの予定を計算して表示する（1件の予定として保存）。 */
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+export const RepeatSchema = z.object({
+  freq: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
+  interval: z.number().int().min(1).max(99),
+  /** 曜日（0=日〜6=土）。毎週のときだけ使う。空なら、開始日の曜日 */
+  weekdays: z.array(z.number().int().min(0).max(6)).max(7).optional(),
+  until: localDate.optional(),
+  count: z.number().int().min(1).max(999).optional(),
+});
+export const EventSchema = z
+  .object({
+    id,
+    title: z.string().trim().min(1).max(100),
+    date: localDate,
+    endDate: localDate.optional(),
+    allDay: z.boolean(),
+    startTime: hhmm.optional(),
+    endTime: hhmm.optional(),
+    place: z.string().max(100).optional(),
+    memo: z.string().max(MAX_TEXT).optional(),
+    repeat: RepeatSchema.optional(),
+    /** 繰り返しの予定のうち、除く日（その日だけ削除したとき） */
+    exdates: z.array(localDate).max(1000).optional(),
+    /** カレンダーファイルから読み込んだ予定の元のID（再読み込みで重複させない） */
+    uid: z.string().max(300).optional(),
+    source: z.enum(['manual', 'ics']).optional(),
+    createdAt: ts,
+    updatedAt: ts,
+  })
+  .refine((e) => !e.endDate || e.endDate >= e.date, { message: '終了日は開始日以降にしてください', path: ['endDate'] })
+  .refine((e) => e.allDay || !e.startTime || !e.endTime || !!e.endDate || e.endTime > e.startTime, { message: '終了時刻は開始時刻より後にしてください', path: ['endTime'] });
+export type CalendarEvent = z.infer<typeof EventSchema>;
+export type Repeat = z.infer<typeof RepeatSchema>;
+
 export const AppSettingsSchema = z.object({
   schemaVersion: z.number().int(),
   onboardingCompleted: z.boolean(),
@@ -116,7 +151,7 @@ export const AppSettingsSchema = z.object({
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: SCHEMA_VERSION,
   onboardingCompleted: false,
