@@ -55,7 +55,9 @@ describe('カレンダー画面', () => {
     await user.click(screen.getByRole('button', { name: /この日に予定を追加/ }));
     await user.type(screen.getByLabelText('予定の名前'), '通院');
     await user.type(screen.getByLabelText('場所'), '病院');
-    await user.selectOptions(screen.getByLabelText('開始時刻の時'), '10');
+    await user.click(screen.getByRole('button', { name: '開始時刻' }));
+    await user.click(within(screen.getByRole('listbox', { name: '開始時刻の時' })).getByRole('option', { name: '10時' }));
+    await user.click(screen.getByRole('button', { name: '決定' }));
     await user.click(screen.getByRole('button', { name: '保存する' }));
     const list = await screen.findByRole('region', { name: '11月10日（火）の予定' });
     expect(within(list).getByText('通院')).toBeInTheDocument();
@@ -145,20 +147,29 @@ describe('予定の読み込み（重複しない）', () => {
   });
 });
 
-import { HourMinuteSelect } from '../src/ui/HourMinuteSelect';
-describe('時刻の選択（時と分）', () => {
-  it('分は5分刻み。時を選ぶと00分、「--」で空に戻る', async () => {
+import { WheelTime } from '../src/ui/WheelTime';
+describe('時刻の選択（時と分の2つのメーター）', () => {
+  it('1回で2つのメーターが出て、分は15分刻み。決定で値になり、空にもできる', async () => {
     const user = userEvent.setup();
     const got: string[] = [];
-    const { rerender } = render(<HourMinuteSelect label="開始時刻" value="" onChange={(v) => got.push(v)} />);
-    expect(screen.getByLabelText('開始時刻の分')).toBeDisabled();
-    await user.selectOptions(screen.getByLabelText('開始時刻の時'), '09');
-    expect(got.at(-1)).toBe('09:00');
-    rerender(<HourMinuteSelect label="開始時刻" value="09:00" onChange={(v) => got.push(v)} />);
-    expect(within(screen.getByLabelText('開始時刻の分')).getAllByRole('option')).toHaveLength(12);
-    await user.selectOptions(screen.getByLabelText('開始時刻の分'), '35');
-    expect(got.at(-1)).toBe('09:35');
-    await user.selectOptions(screen.getByLabelText('開始時刻の時'), '');
+    const { rerender } = render(<WheelTime label="開始時刻" value="" onChange={(v) => got.push(v)} />);
+    await user.click(screen.getByRole('button', { name: '開始時刻' }));
+    const dlg = screen.getByRole('dialog', { name: '開始時刻を選ぶ' });
+    expect(within(screen.getByRole('listbox', { name: '開始時刻の分' })).getAllByRole('option').map((o) => o.textContent)).toEqual(['00分', '15分', '30分', '45分']);
+    await user.click(within(dlg).getByRole('option', { name: '14時' }));
+    await user.click(within(dlg).getByRole('option', { name: '45分' }));
+    await user.click(within(dlg).getByRole('button', { name: '決定' }));
+    expect(got.at(-1)).toBe('14:45');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    rerender(<WheelTime label="開始時刻" value="14:45" onChange={(v) => got.push(v)} />);
+    await user.click(screen.getByRole('button', { name: '開始時刻' }));
+    await user.click(screen.getByRole('button', { name: '空にする' }));
     expect(got.at(-1)).toBe('');
+  });
+  it('15分刻み以外の既存の時刻は、そのまま残る', async () => {
+    const user = userEvent.setup();
+    render(<WheelTime label="終了時刻" value="09:32" onChange={() => {}} />);
+    await user.click(screen.getByRole('button', { name: '終了時刻' }));
+    expect(within(screen.getByRole('listbox', { name: '終了時刻の分' })).getByRole('option', { name: '32分' })).toBeTruthy();
   });
 });

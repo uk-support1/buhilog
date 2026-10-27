@@ -157,3 +157,15 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 .hol-badge { background:#fde7e5; color:#b3332b; margin-left:6px; }
 .hmrow { display:grid; grid-template-columns:1fr 1fr; gap:8px; } .hm select { width:100%; min-width:0; display:block; }
 .colors button { flex:0 0 32px; height:32px; }
+/* 時と分の2つのメーター */
+.timebtn { width:100%; text-align:left; font-size:1.05rem; }
+.sheetbg { position:fixed; inset:0; background:rgba(60,30,40,.35); z-index:50; display:flex; align-items:flex-end; }
+.sheet { background:#fff; width:100%; border-radius:20px 20px 0 0; padding:14px 16px calc(16px + env(safe-area-inset-bottom)); }
+.sheet h3 { margin:0 0 8px; text-align:center; }
+.wheels { position:relative; display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+.wheel { list-style:none; margin:0; padding:88px 0; height:220px; overflow-y:auto; scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; text-align:center; scrollbar-width:none; }
+.wheel::-webkit-scrollbar { display:none; }
+.wheel li { height:44px; line-height:44px; scroll-snap-align:center; font-size:1.15rem; color:var(--muted); cursor:pointer; }
+.wheel li.sel { color:var(--fg); font-weight:800; font-size:1.3rem; }
+.band { position:absolute; left:0; right:0; top:88px; height:44px; border-radius:12px; background:var(--accent-soft); z-index:-1; }
+.band { z-index:0; } .wheel { position:relative; z-index:1; }

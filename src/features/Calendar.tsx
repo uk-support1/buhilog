@@ -5,7 +5,7 @@ import { COLOR_HEX, COLOR_LABEL, colorOf, eventsInRange, eventsOn, REPEAT_LABEL,
 import { EVENT_COLORS, type CalendarEvent, type Repeat } from '../domain/types';
 import { holidayName } from '../domain/holidays';
 import { parseIcs, type IcsResult } from '../domain/ics';
-import { HourMinuteSelect } from '../ui/HourMinuteSelect';
+import { WheelTime } from '../ui/WheelTime';
 
 type Freq = '' | Repeat['freq'];
 interface Draft {
@@ -198,8 +198,8 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
           <label className="check"><input type="checkbox" checked={draft.allDay} onChange={(e) => set({ allDay: e.target.checked })} />終日</label>
           {!draft.allDay && (
             <div className="two">
-              <HourMinuteSelect label="開始時刻" value={draft.startTime} onChange={(v) => set({ startTime: v })} />
-              <HourMinuteSelect label="終了時刻" value={draft.endTime} onChange={(v) => set({ endTime: v })} />
+              <WheelTime label="開始時刻" value={draft.startTime} onChange={(v) => set({ startTime: v })} />
+              <WheelTime label="終了時刻" initial={draft.startTime || undefined} value={draft.endTime} onChange={(v) => set({ endTime: v })} />
             </div>
           )}
           <div role="radiogroup" aria-label="色" className="field">
