@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { Repo } from './repo';
 import type { BuhiLogDB } from './db';
 import { convertLegacyRatings } from '../domain/scale';
-import { convertDayFactors } from '../domain/dayFactors';
+import { convertDayFactors, ensureMorningMotivation } from '../domain/dayFactors';
 import { ensureMedications } from '../domain/medications';
 import { ensureVitalitySigns } from '../domain/signs';
 import {
@@ -70,6 +70,10 @@ function normalizeOlder(json: unknown): void {
     const r = ensureMedications(h.problems, h.medications ?? [], h.dailyEntries ?? [], () => crypto.randomUUID(), Date.now());
     h.medications = r.medications;
     h.dailyEntries = r.entries;
+  }
+  // v8: 朝要因の「出社前の活動（やる気）」
+  if (j.settings && (j.settings.schemaVersion ?? 0) < 8 && Array.isArray(j.problems)) {
+    (j as { problems: Problem[] }).problems = ensureMorningMotivation(j.problems as unknown as Problem[], () => crypto.randomUUID(), Date.now()).problems;
   }
   if (j.settings) j.settings.schemaVersion = SCHEMA_VERSION;
 }

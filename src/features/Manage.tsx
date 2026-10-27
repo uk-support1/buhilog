@@ -17,6 +17,8 @@ export function Manage({ repo }: { repo: Repo }) {
   };
 
   const [pName, setPName] = useState('');
+  const [pAfter, setPAfter] = useState('');
+  const [pFactor, setPFactor] = useState(false);
   const [aName, setAName] = useState('');
   const [aLinks, setALinks] = useState<string[]>([]);
   const [linkEditId, setLinkEditId] = useState<string | null>(null);
@@ -54,9 +56,18 @@ export function Manage({ repo }: { repo: Repo }) {
             </li>
           ))}
         </ul>
-        <form className="row" onSubmit={(e) => { e.preventDefault(); const n = pName.trim(); if (!n) return; void run(async () => { await repo.addProblem(n); setPName(''); }); }}>
-          <input aria-label="新しい困りごと" placeholder="例: 右肩の痛み" maxLength={MAX_NAME} value={pName} onChange={(e) => setPName(e.target.value)} />
-          <button type="submit">追加</button>
+        <form onSubmit={(e) => { e.preventDefault(); const n = pName.trim(); if (!n) return; void run(async () => { await repo.addProblem(n, undefined, undefined, undefined, { afterId: pAfter || undefined, asFactor: pFactor }); setPName(''); setPAfter(''); setPFactor(false); }); }}>
+          <div className="row">
+            <input aria-label="新しい困りごと" placeholder="例: 右肩の痛み" maxLength={MAX_NAME} value={pName} onChange={(e) => setPName(e.target.value)} />
+            <button type="submit">追加</button>
+          </div>
+          <label className="field">入れる場所（選んだ項目の下に、同じグループで入ります）
+            <select aria-label="この項目の下に入れる" value={pAfter} onChange={(e) => setPAfter(e.target.value)}>
+              <option value="">いちばん最後</option>
+              {activeP.map((p) => <option key={p.id} value={p.id}>{p.name}の下{groupLabel(p) ? `（${groupLabel(p)}）` : ''}</option>)}
+            </select>
+          </label>
+          <label className="check"><input type="checkbox" checked={pFactor} onChange={(e) => setPFactor(e.target.checked)} />ほかの困りごとの「要因」としても比べる</label>
         </form>
         {archivedP.length > 0 && (
           <details>
