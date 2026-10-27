@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { formatJa, toLocalDate } from '../domain/date';
+import { holidayName } from '../domain/holidays';
 import { colorOf, eventsOn, timeLabel, type Occurrence } from '../domain/schedule';
 
 /** 「今日」画面の一番上に出る、その日の予定 */
@@ -16,7 +17,7 @@ export function TodayEvents({ repo, date, onOpen }: { repo: Repo; date: string; 
   return (
     <section className="card events" aria-label={title}>
       <div className="row">
-        <h2 className="grow">{title}{list.length > 0 && <small className="muted"> {list.length}件</small>}</h2>
+        <h2 className="grow">{title}{holidayName(date) && <small className="badge hol-badge">祝日 {holidayName(date)}</small>}{list.length > 0 && <small className="muted"> {list.length}件</small>}</h2>
         <button type="button" onClick={() => onOpen(date)}>{list.length ? 'カレンダーを開く' : '予定を追加'}</button>
       </div>
       {list.length === 0 ? (
