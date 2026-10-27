@@ -5,7 +5,7 @@ import { COLOR_HEX, COLOR_LABEL, colorOf, eventsInRange, eventsOn, REPEAT_LABEL,
 import { EVENT_COLORS, type CalendarEvent, type Repeat } from '../domain/types';
 import { holidayName } from '../domain/holidays';
 import { parseIcs, type IcsResult } from '../domain/ics';
-import { TimeSelect } from '../ui/TimeSelect';
+import { HourMinuteSelect } from '../ui/HourMinuteSelect';
 
 type Freq = '' | Repeat['freq'];
 interface Draft {
@@ -29,10 +29,10 @@ interface Draft {
   createdAt?: number;
 }
 
-const newDraft = (date: string): Draft => ({ title: '', date, endDate: '', allDay: false, startTime: '', endTime: '', place: '', memo: '', color: 'blue', freq: '', interval: '1', weekdays: [], until: '' });
+const newDraft = (date: string): Draft => ({ title: '', date, endDate: '', allDay: false, startTime: '', endTime: '', place: '', memo: '', color: 'brown', freq: '', interval: '1', weekdays: [], until: '' });
 const fromEvent = (e: CalendarEvent): Draft => ({
   id: e.id, title: e.title, date: e.date, endDate: e.endDate ?? '', allDay: e.allDay, startTime: e.startTime ?? '', endTime: e.endTime ?? '',
-  place: e.place ?? '', memo: e.memo ?? '', color: e.color ?? 'blue', freq: e.repeat?.freq ?? '', interval: String(e.repeat?.interval ?? 1), weekdays: e.repeat?.weekdays ?? [],
+  place: e.place ?? '', memo: e.memo ?? '', color: e.color ?? 'brown', freq: e.repeat?.freq ?? '', interval: String(e.repeat?.interval ?? 1), weekdays: e.repeat?.weekdays ?? [],
   until: e.repeat?.until ?? '', exdates: e.exdates, uid: e.uid, source: e.source,
 });
 
@@ -100,7 +100,7 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
         endTime: draft.allDay ? undefined : draft.endTime || undefined,
         place: draft.place.trim() || undefined,
         memo: draft.memo.trim() || undefined,
-        color: draft.color === 'blue' ? undefined : (draft.color as (typeof EVENT_COLORS)[number]),
+        color: draft.color === 'brown' ? undefined : (draft.color as (typeof EVENT_COLORS)[number]),
         repeat: draft.freq
           ? { freq: draft.freq, interval, ...(draft.freq === 'weekly' && draft.weekdays.length ? { weekdays: [...draft.weekdays].sort() } : {}), ...(draft.until ? { until: draft.until } : {}) }
           : undefined,
@@ -198,8 +198,8 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
           <label className="check"><input type="checkbox" checked={draft.allDay} onChange={(e) => set({ allDay: e.target.checked })} />終日</label>
           {!draft.allDay && (
             <div className="two">
-              <TimeSelect label="開始時刻" value={draft.startTime} startHour={6} onChange={(v) => set({ startTime: v })} />
-              <TimeSelect label="終了時刻" value={draft.endTime} startHour={6} onChange={(v) => set({ endTime: v })} />
+              <HourMinuteSelect label="開始時刻" value={draft.startTime} onChange={(v) => set({ startTime: v })} />
+              <HourMinuteSelect label="終了時刻" value={draft.endTime} onChange={(v) => set({ endTime: v })} />
             </div>
           )}
           <div role="radiogroup" aria-label="色" className="field">

@@ -139,7 +139,7 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 .calgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin:8px 0; } .calgrid .wd { text-align:center; font-weight:700; font-size:.8rem; color:var(--muted); } .wd0 { color:#c0392b !important; } .wd6 { color:#2a78c2 !important; }
 .day { position:relative; min-height:54px; padding:2px; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:1px; background:#fff; border:2px solid transparent; }
 .day.out { opacity:.4; } .day.today { border-color:var(--accent); } .day.sel { background:var(--accent-soft); box-shadow:0 0 0 2px var(--accent); }
-.day .num { font-weight:700; font-size:.95rem; } .day .dots { display:flex; gap:2px; align-items:center; min-height:10px; font-size:.7rem; color:var(--sky-fg); } .day .dots i { width:7px; height:7px; border-radius:50%; background:#3aa0e0; display:inline-block; }
+.day .num { font-weight:700; font-size:.95rem; } .day .dots { display:flex; gap:2px; align-items:center; min-height:10px; font-size:.7rem; color:var(--sky-fg); } .day .dots i { width:7px; height:7px; border-radius:50%; background:#9a8478; display:inline-block; }
 .day .rec { position:absolute; right:3px; top:1px; font-size:.65rem; color:var(--ok); font-weight:800; }
 .evform .check { margin:4px 0; }
 /* メニューが4つになったので、文字を少し小さくして、折り返さない */
@@ -149,9 +149,11 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 /* 2列の入力欄が、画面の幅からはみ出さないように */
 .two > * { min-width:0; } .two input[type=date] { min-width:0; width:100%; font-size:.92rem; padding-left:8px; padding-right:6px; }
 /* 予定の色 */
-.evrow { border-left:5px solid #3aa0e0; padding-left:8px; margin:6px 0; }
+.evrow { border-left:5px solid #9a8478; padding-left:8px; margin:6px 0; }
 .colors { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; } .colors button { width:32px; height:32px; min-width:32px; padding:0; border-radius:50%; border:3px solid transparent; } .colors button.sel { border-color:var(--fg); box-shadow:0 0 0 2px #fff inset; }
 /* 祝日・土日 */
 .day.red .num { color:#d9473f; } .day.blue .num { color:#2f7fd0; } .day.sel.red .num { color:#d9473f; } .day.sel.blue .num { color:#2f7fd0; }
 .day .hol { font-size:.55rem; line-height:1.1; color:#d9473f; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .hol-badge { background:#fde7e5; color:#b3332b; margin-left:6px; }
+.hmrow { display:grid; grid-template-columns:1fr 1fr; gap:8px; } .hm select { width:100%; min-width:0; display:block; }
+.colors button { flex:0 0 32px; height:32px; }

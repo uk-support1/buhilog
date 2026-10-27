@@ -55,7 +55,7 @@ describe('カレンダー画面', () => {
     await user.click(screen.getByRole('button', { name: /この日に予定を追加/ }));
     await user.type(screen.getByLabelText('予定の名前'), '通院');
     await user.type(screen.getByLabelText('場所'), '病院');
-    await user.selectOptions(screen.getByLabelText('開始時刻'), '10:00');
+    await user.selectOptions(screen.getByLabelText('開始時刻の時'), '10');
     await user.click(screen.getByRole('button', { name: '保存する' }));
     const list = await screen.findByRole('region', { name: '11月10日（火）の予定' });
     expect(within(list).getByText('通院')).toBeInTheDocument();
@@ -142,5 +142,23 @@ describe('予定の読み込み（重複しない）', () => {
     const list = await repo.listEvents();
     expect(list).toHaveLength(2);
     expect(list.find((e) => e.uid === 'u1')?.title).toBe('🚗仕事');
+  });
+});
+
+import { HourMinuteSelect } from '../src/ui/HourMinuteSelect';
+describe('時刻の選択（時と分）', () => {
+  it('分は5分刻み。時を選ぶと00分、「--」で空に戻る', async () => {
+    const user = userEvent.setup();
+    const got: string[] = [];
+    const { rerender } = render(<HourMinuteSelect label="開始時刻" value="" onChange={(v) => got.push(v)} />);
+    expect(screen.getByLabelText('開始時刻の分')).toBeDisabled();
+    await user.selectOptions(screen.getByLabelText('開始時刻の時'), '09');
+    expect(got.at(-1)).toBe('09:00');
+    rerender(<HourMinuteSelect label="開始時刻" value="09:00" onChange={(v) => got.push(v)} />);
+    expect(within(screen.getByLabelText('開始時刻の分')).getAllByRole('option')).toHaveLength(12);
+    await user.selectOptions(screen.getByLabelText('開始時刻の分'), '35');
+    expect(got.at(-1)).toBe('09:35');
+    await user.selectOptions(screen.getByLabelText('開始時刻の時'), '');
+    expect(got.at(-1)).toBe('');
   });
 });
