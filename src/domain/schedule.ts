@@ -119,6 +119,6 @@ export function timeLabel(o: Occurrence): string {
 
 export const COLOR_LABEL: Record<EventColor, string> = { blue: '青', pink: 'ピンク', red: '赤', yellow: '黄', green: '緑', purple: '紫', brown: '茶', gray: '灰' };
 export const COLOR_HEX: Record<EventColor, string> = { blue: '#3aa0e0', pink: '#e0668a', red: '#d9473f', yellow: '#f0b93a', green: '#4cae6b', purple: '#8c6cc9', brown: '#9a8478', gray: '#9a9aa3' };
-export const colorOf = (e: { color?: keyof typeof COLOR_HEX }) => COLOR_HEX[e.color ?? 'blue'];
+export const colorOf = (e: { color?: keyof typeof COLOR_HEX }) => COLOR_HEX[e.color ?? 'brown'];
 export const REPEAT_LABEL = { daily: '毎日', weekly: '毎週', monthly: '毎月', yearly: '毎年' } as const;
 export const WEEKDAY_LABEL = ['日', '月', '火', '水', '木', '金', '土'] as const;
