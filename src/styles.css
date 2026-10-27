@@ -148,3 +148,6 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 .day.sel { color:var(--fg); } .day.sel .num { color:var(--accent); font-size:1.05rem; } .day.sel .dots { color:var(--sky-fg); }
 /* 2列の入力欄が、画面の幅からはみ出さないように */
 .two > * { min-width:0; } .two input[type=date] { min-width:0; width:100%; font-size:.92rem; padding-left:8px; padding-right:6px; }
+/* 予定の色 */
+.evrow { border-left:5px solid #3aa0e0; padding-left:8px; margin:6px 0; }
+.colors { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; } .colors button { width:32px; height:32px; min-width:32px; padding:0; border-radius:50%; border:3px solid transparent; } .colors button.sel { border-color:var(--fg); box-shadow:0 0 0 2px #fff inset; }

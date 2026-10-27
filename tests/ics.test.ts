@@ -40,3 +40,12 @@ describe('ics 読み込み', () => {
     for (const e of back.events) expect(() => EventSchema.parse({ ...e, id: 'i', createdAt: 1, updatedAt: 1 })).not.toThrow();
   });
 });
+
+describe('予定の色', () => {
+  it('色を書き出して読み直せる。知らない色は無視', () => {
+    const back = parseIcs(toIcs([{ uid: 'c1', title: 'a', date: '2026-11-01', allDay: true, color: 'pink' }]));
+    expect(back.events[0].color).toBe('pink');
+    const bad = parseIcs(wrap(ev(['SUMMARY:x', 'DTSTART:20261101T100000', 'X-BUHILOG-COLOR:neon'])));
+    expect(bad.events[0].color).toBeUndefined();
+  });
+});

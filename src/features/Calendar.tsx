@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { addDays, formatJa, toLocalDate } from '../domain/date';
-import { eventsInRange, eventsOn, REPEAT_LABEL, timeLabel, WEEKDAY_LABEL, weekdayOf, type Occurrence } from '../domain/schedule';
-import type { CalendarEvent, Repeat } from '../domain/types';
+import { COLOR_HEX, COLOR_LABEL, colorOf, eventsInRange, eventsOn, REPEAT_LABEL, timeLabel, WEEKDAY_LABEL, weekdayOf, type Occurrence } from '../domain/schedule';
+import { EVENT_COLORS, type CalendarEvent, type Repeat } from '../domain/types';
 import { parseIcs, type IcsResult } from '../domain/ics';
 import { TimeSelect } from '../ui/TimeSelect';
 
@@ -17,6 +17,7 @@ interface Draft {
   endTime: string;
   place: string;
   memo: string;
+  color: string;
   freq: Freq;
   interval: string;
   weekdays: number[];
@@ -27,10 +28,10 @@ interface Draft {
   createdAt?: number;
 }
 
-const newDraft = (date: string): Draft => ({ title: '', date, endDate: '', allDay: false, startTime: '', endTime: '', place: '', memo: '', freq: '', interval: '1', weekdays: [], until: '' });
+const newDraft = (date: string): Draft => ({ title: '', date, endDate: '', allDay: false, startTime: '', endTime: '', place: '', memo: '', color: 'blue', freq: '', interval: '1', weekdays: [], until: '' });
 const fromEvent = (e: CalendarEvent): Draft => ({
   id: e.id, title: e.title, date: e.date, endDate: e.endDate ?? '', allDay: e.allDay, startTime: e.startTime ?? '', endTime: e.endTime ?? '',
-  place: e.place ?? '', memo: e.memo ?? '', freq: e.repeat?.freq ?? '', interval: String(e.repeat?.interval ?? 1), weekdays: e.repeat?.weekdays ?? [],
+  place: e.place ?? '', memo: e.memo ?? '', color: e.color ?? 'blue', freq: e.repeat?.freq ?? '', interval: String(e.repeat?.interval ?? 1), weekdays: e.repeat?.weekdays ?? [],
   until: e.repeat?.until ?? '', exdates: e.exdates, uid: e.uid, source: e.source,
 });
 
@@ -98,6 +99,7 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
         endTime: draft.allDay ? undefined : draft.endTime || undefined,
         place: draft.place.trim() || undefined,
         memo: draft.memo.trim() || undefined,
+        color: draft.color === 'blue' ? undefined : (draft.color as (typeof EVENT_COLORS)[number]),
         repeat: draft.freq
           ? { freq: draft.freq, interval, ...(draft.freq === 'weekly' && draft.weekdays.length ? { weekdays: [...draft.weekdays].sort() } : {}), ...(draft.until ? { until: draft.until } : {}) }
           : undefined,
@@ -150,7 +152,7 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
             return (
               <button key={d} type="button" role="gridcell" className={cls} aria-pressed={d === selected} aria-label={`${formatJa(d)}${list.length ? ` 予定${list.length}件` : ''}${recorded.has(d) ? ' 記録あり' : ''}`} onClick={() => setSelected(d)}>
                 <span className="num">{Number(d.slice(8))}</span>
-                <span className="dots" aria-hidden="true">{list.slice(0, 3).map((_, i) => <i key={i} />)}{list.length > 3 && '+'}</span>
+                <span className="dots" aria-hidden="true">{list.slice(0, 3).map((o, i) => <i key={i} style={{ background: colorOf(o.event) }} />)}{list.length > 3 && '+'}</span>
                 {recorded.has(d) && <span className="rec" aria-hidden="true">✓</span>}
               </button>
             );
@@ -167,7 +169,7 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
         {dayList.length === 0 && !draft && <p className="muted small">予定はありません。</p>}
         <ul className="plain">
           {dayList.map((o, i) => (
-            <li key={`${o.event.id}-${i}`} className="evrow">
+            <li key={`${o.event.id}-${i}`} className="evrow" style={{ borderLeftColor: colorOf(o.event) }}>
               <span className="evtime">{timeLabel(o)}</span>
               <span className="evmain">
                 <strong>{o.event.title}</strong>
@@ -197,6 +199,14 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
               <TimeSelect label="終了時刻" value={draft.endTime} startHour={6} onChange={(v) => set({ endTime: v })} />
             </div>
           )}
+          <div role="radiogroup" aria-label="色" className="field">
+            <span>色</span>
+            <div className="colors">
+              {EVENT_COLORS.map((c) => (
+                <button key={c} type="button" role="radio" aria-checked={draft.color === c} aria-label={COLOR_LABEL[c]} className={draft.color === c ? 'sel' : ''} style={{ background: COLOR_HEX[c] }} onClick={() => set({ color: c })} />
+              ))}
+            </div>
+          </div>
           <label className="field">場所<input value={draft.place} maxLength={100} onChange={(e) => set({ place: e.target.value })} /></label>
           <label className="field">メモ<textarea rows={2} maxLength={2000} value={draft.memo} onChange={(e) => set({ memo: e.target.value })} /></label>
           <label className="field">

@@ -1,4 +1,4 @@
-import type { CalendarEvent, Repeat } from './types';
+import { EVENT_COLORS, type CalendarEvent, type Repeat } from './types';
 import { addDays } from './date';
 import { weekdayOf } from './schedule';
 
@@ -95,6 +95,8 @@ function build(lines: ReturnType<typeof unfold>): ImportedEvent | null {
   if (place) ev.place = place.slice(0, 100);
   const memo = unescape(get('DESCRIPTION')?.value ?? '').trim();
   if (memo) ev.memo = memo.slice(0, 2000);
+  const col = get('X-BUHILOG-COLOR')?.value.trim().toLowerCase();
+  if (col && (EVENT_COLORS as readonly string[]).includes(col)) ev.color = col as ImportedEvent['color'];
   const rr = get('RRULE');
   if (rr) {
     const r = parseRrule(rr.value);
@@ -120,6 +122,7 @@ export function toIcs(events: (ImportedEvent & { uid: string })[]): string {
       lines.push(`DTSTART:${d(e.date)}T${e.startTime!.replace(':', '')}00`);
       if (e.endTime) lines.push(`DTEND:${d(e.endDate ?? e.date)}T${e.endTime.replace(':', '')}00`);
     }
+    if (e.color) lines.push(`X-BUHILOG-COLOR:${e.color}`);
     if (e.place) lines.push(`LOCATION:${esc(e.place)}`);
     if (e.memo) lines.push(`DESCRIPTION:${esc(e.memo)}`);
     lines.push('END:VEVENT');
