@@ -1,5 +1,6 @@
 import { addDays } from './date';
-import type { CalendarEvent } from './types';
+import type { CalendarEvent, EVENT_COLORS } from './types';
+type EventColor = (typeof EVENT_COLORS)[number];
 
 /** 予定の日付計算（繰り返し・複数日・除外日）。端末のローカル日付（YYYY-MM-DD）だけで計算し、UTCのずれを持ち込まない。 */
 
@@ -116,5 +117,8 @@ export function timeLabel(o: Occurrence): string {
   return o.totalDays > 1 ? `${t}（${o.dayNo}日目/${o.totalDays}日間）` : t;
 }
 
+export const COLOR_LABEL: Record<EventColor, string> = { blue: '青', pink: 'ピンク', red: '赤', yellow: '黄', green: '緑', purple: '紫', brown: '茶', gray: '灰' };
+export const COLOR_HEX: Record<EventColor, string> = { blue: '#3aa0e0', pink: '#e0668a', red: '#d9473f', yellow: '#f0b93a', green: '#4cae6b', purple: '#8c6cc9', brown: '#9a8478', gray: '#9a9aa3' };
+export const colorOf = (e: { color?: keyof typeof COLOR_HEX }) => COLOR_HEX[e.color ?? 'blue'];
 export const REPEAT_LABEL = { daily: '毎日', weekly: '毎週', monthly: '毎月', yearly: '毎年' } as const;
 export const WEEKDAY_LABEL = ['日', '月', '火', '水', '木', '金', '土'] as const;

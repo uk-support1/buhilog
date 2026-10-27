@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { formatJa, toLocalDate } from '../domain/date';
-import { eventsOn, timeLabel, type Occurrence } from '../domain/schedule';
+import { colorOf, eventsOn, timeLabel, type Occurrence } from '../domain/schedule';
 
 /** 「今日」画面の一番上に出る、その日の予定 */
 export function TodayEvents({ repo, date, onOpen }: { repo: Repo; date: string; onOpen: (date: string) => void }) {
@@ -24,7 +24,7 @@ export function TodayEvents({ repo, date, onOpen }: { repo: Repo; date: string; 
       ) : (
         <ul className="plain">
           {list.map((o, i) => (
-            <li key={`${o.event.id}-${i}`} className="evrow">
+            <li key={`${o.event.id}-${i}`} className="evrow" style={{ borderLeftColor: colorOf(o.event) }}>
               <span className="evtime">{timeLabel(o)}</span>
               <span className="evmain">
                 <strong>{o.event.title}</strong>

@@ -104,6 +104,7 @@ export type Medication = z.infer<typeof MedicationSchema>;
 
 /** 予定（カレンダー）。繰り返しは、設定から日ごとの予定を計算して表示する（1件の予定として保存）。 */
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+export const EVENT_COLORS = ['blue', 'pink', 'red', 'yellow', 'green', 'purple', 'brown', 'gray'] as const;
 export const RepeatSchema = z.object({
   freq: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
   interval: z.number().int().min(1).max(99),
@@ -123,6 +124,8 @@ export const EventSchema = z
     endTime: hhmm.optional(),
     place: z.string().max(100).optional(),
     memo: z.string().max(MAX_TEXT).optional(),
+    /** 表示の色（なければ青） */
+    color: z.enum(EVENT_COLORS).optional(),
     repeat: RepeatSchema.optional(),
     /** 繰り返しの予定のうち、除く日（その日だけ削除したとき） */
     exdates: z.array(localDate).max(1000).optional(),
