@@ -3,6 +3,7 @@ import type { Repo } from '../db/repo';
 import { addDays, formatJa, toLocalDate } from '../domain/date';
 import { COLOR_HEX, COLOR_LABEL, colorOf, eventsInRange, eventsOn, REPEAT_LABEL, timeLabel, WEEKDAY_LABEL, weekdayOf, type Occurrence } from '../domain/schedule';
 import { EVENT_COLORS, type CalendarEvent, type Repeat } from '../domain/types';
+import { holidayName } from '../domain/holidays';
 import { parseIcs, type IcsResult } from '../domain/ics';
 import { TimeSelect } from '../ui/TimeSelect';
 
@@ -145,13 +146,15 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
         </div>
         <div className="calgrid" role="grid" aria-label={`${y}年${m}月のカレンダー`}>
           {WEEKDAY_LABEL.map((w, i) => <div key={w} role="columnheader" className={`wd wd${i}`}>{w}</div>)}
-          {days.map((d) => {
+          {days.map((d, di) => {
+            const hol = holidayName(d);
             const list = byDay.get(d) ?? [];
             const inMonth = d.slice(0, 7) === month.slice(0, 7);
-            const cls = ['day', inMonth ? '' : 'out', d === today ? 'today' : '', d === selected ? 'sel' : ''].join(' ');
+            const cls = ['day', inMonth ? '' : 'out', d === today ? 'today' : '', d === selected ? 'sel' : '', hol || di % 7 === 0 ? 'red' : di % 7 === 6 ? 'blue' : ''].join(' ');
             return (
-              <button key={d} type="button" role="gridcell" className={cls} aria-pressed={d === selected} aria-label={`${formatJa(d)}${list.length ? ` 予定${list.length}件` : ''}${recorded.has(d) ? ' 記録あり' : ''}`} onClick={() => setSelected(d)}>
+              <button key={d} type="button" role="gridcell" className={cls} aria-pressed={d === selected} aria-label={`${formatJa(d)}${list.length ? ` 予定${list.length}件` : ''}${recorded.has(d) ? ' 記録あり' : ''}${hol ? ` 祝日 ${hol}` : ''}`} onClick={() => setSelected(d)}>
                 <span className="num">{Number(d.slice(8))}</span>
+                {hol && <span className="hol" aria-hidden="true">{hol}</span>}
                 <span className="dots" aria-hidden="true">{list.slice(0, 3).map((o, i) => <i key={i} style={{ background: colorOf(o.event) }} />)}{list.length > 3 && '+'}</span>
                 {recorded.has(d) && <span className="rec" aria-hidden="true">✓</span>}
               </button>
@@ -163,7 +166,7 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
 
       <section className="card" aria-label={`${formatJa(selected)}の予定`}>
         <div className="row">
-          <h2 className="grow">{formatJa(selected)}の予定</h2>
+          <h2 className="grow">{formatJa(selected)}の予定{holidayName(selected) && <small className="badge hol-badge">祝日 {holidayName(selected)}</small>}</h2>
           {onPick && <button type="button" onClick={() => onPick(selected)}>この日の記録へ</button>}
         </div>
         {dayList.length === 0 && !draft && <p className="muted small">予定はありません。</p>}

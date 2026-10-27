@@ -151,3 +151,7 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 /* 予定の色 */
 .evrow { border-left:5px solid #3aa0e0; padding-left:8px; margin:6px 0; }
 .colors { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; } .colors button { width:32px; height:32px; min-width:32px; padding:0; border-radius:50%; border:3px solid transparent; } .colors button.sel { border-color:var(--fg); box-shadow:0 0 0 2px #fff inset; }
+/* 祝日・土日 */
+.day.red .num { color:#d9473f; } .day.blue .num { color:#2f7fd0; } .day.sel.red .num { color:#d9473f; } .day.sel.blue .num { color:#2f7fd0; }
+.day .hol { font-size:.55rem; line-height:1.1; color:#d9473f; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hol-badge { background:#fde7e5; color:#b3332b; margin-left:6px; }
