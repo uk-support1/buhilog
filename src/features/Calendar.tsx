@@ -3,6 +3,7 @@ import type { Repo } from '../db/repo';
 import { addDays, formatJa, toLocalDate } from '../domain/date';
 import { eventsInRange, eventsOn, REPEAT_LABEL, timeLabel, WEEKDAY_LABEL, weekdayOf, type Occurrence } from '../domain/schedule';
 import type { CalendarEvent, Repeat } from '../domain/types';
+import { parseIcs, type IcsResult } from '../domain/ics';
 import { TimeSelect } from '../ui/TimeSelect';
 
 type Freq = '' | Repeat['freq'];
@@ -48,6 +49,26 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
   const [recorded, setRecorded] = useState<Set<string>>(new Set());
   const [draft, setDraft] = useState<Draft | null>(null);
   const [err, setErr] = useState('');
+  const [ics, setIcs] = useState<(IcsResult & { name: string }) | null>(null);
+  const [icsMsg, setIcsMsg] = useState('');
+
+  const pickIcs = async (file: File | undefined) => {
+    setIcsMsg('');
+    if (!file) return;
+    if (file.size > 5_000_000) { setIcsMsg('ファイルが大きすぎます（5MBまで）。'); return; }
+    const r = parseIcs(await file.text());
+    if (r.events.length === 0) { setIcs(null); setIcsMsg('読み込める予定が見つかりませんでした。'); return; }
+    setIcs({ ...r, name: file.name });
+  };
+  const doImport = async () => {
+    if (!ics) return;
+    try {
+      const r = await repo.importEvents(ics.events);
+      setIcsMsg(`読み込みました：追加 ${r.added}件${r.updated ? `、更新 ${r.updated}件` : ''}。`);
+      setIcs(null);
+      await reload();
+    } catch { setIcsMsg('読み込みに失敗しました。ファイルの内容を確認してください。'); }
+  };
 
   const reload = useCallback(async () => {
     setEvents(await repo.listEvents());
@@ -213,6 +234,18 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
           </div>
         </section>
       )}
+      <section className="card" aria-label="カレンダーファイルの読み込み">
+        <h3>カレンダーファイル(.ics)を読み込む</h3>
+        <p className="muted">Googleカレンダーなどから書き出したファイルを、この端末の中だけで取り込みます（外部には送りません）。同じ予定を読み込み直しても、重複しません。</p>
+        <input type="file" accept=".ics,text/calendar" aria-label="カレンダーファイルを選ぶ" onChange={(e) => { void pickIcs(e.target.files?.[0]); e.target.value = ''; }} />
+        {ics && (
+          <>
+            <p>{ics.name}：予定 {ics.events.length}件{ics.skipped > 0 && `（対応できない予定 ${ics.skipped}件は、飛ばします）`}</p>
+            <button type="button" className="primary" onClick={doImport}>この{ics.events.length}件を読み込む</button>
+          </>
+        )}
+        {icsMsg && <p role="status">{icsMsg}</p>}
+      </section>
     </div>
   );
 }

@@ -125,6 +125,21 @@ export function createRepo(d: BuhiLogDB = db) {
       });
     },
     async deleteEvent(id: string) { await d.events.delete(id); },
+    /** 読み込んだ予定を追加する。同じ元ID(uid)の予定は、上書きして重複させない。追加・更新の件数を返す */
+    async importEvents(list: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<{ added: number; updated: number }> {
+      return d.transaction('rw', d.events, async () => {
+        const byUid = new Map((await d.events.toArray()).filter((e) => e.uid).map((e) => [e.uid!, e]));
+        let added = 0, updated = 0;
+        const now = Date.now();
+        for (const input of list) {
+          const cur = input.uid ? byUid.get(input.uid) : undefined;
+          const e = EventSchema.parse({ ...input, id: cur?.id ?? newId(), createdAt: cur?.createdAt ?? now, updatedAt: now });
+          await d.events.put(e);
+          if (cur) updated++; else added++;
+        }
+        return { added, updated };
+      });
+    },
 
     // ---- 設定 ----
     async getSettings(): Promise<AppSettings> {

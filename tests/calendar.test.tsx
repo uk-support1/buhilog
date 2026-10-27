@@ -132,3 +132,15 @@ describe('今日の画面の一番上の予定', () => {
     expect(open).toHaveBeenCalledWith('2026-03-03');
   });
 });
+
+describe('予定の読み込み（重複しない）', () => {
+  it('同じuidは、2回読み込んでも1件のまま更新される', async () => {
+    const repo = createRepo(new BuhiLogDB('ev-import'));
+    const item = { uid: 'u1', source: 'ics' as const, allDay: true, title: '仕事', date: '2026-11-02' };
+    expect(await repo.importEvents([item, { ...item, uid: 'u2', date: '2026-11-03' }])).toEqual({ added: 2, updated: 0 });
+    expect(await repo.importEvents([{ ...item, title: '🚗仕事' }])).toEqual({ added: 0, updated: 1 });
+    const list = await repo.listEvents();
+    expect(list).toHaveLength(2);
+    expect(list.find((e) => e.uid === 'u1')?.title).toBe('🚗仕事');
+  });
+});
