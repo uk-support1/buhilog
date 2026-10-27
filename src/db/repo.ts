@@ -13,15 +13,27 @@ export function createRepo(d: BuhiLogDB = db) {
       const all = await d.problems.orderBy('order').toArray();
       return includeArchived ? all : all.filter((p) => !p.archivedAt);
     },
-    async addProblem(name: string, description?: string, group?: string, section?: string): Promise<Problem> {
-      const now = Date.now();
-      const all = await d.problems.toArray();
-      const order = all.reduce((m, p) => Math.max(m, p.order), -1) + 1;
-      const p = ProblemSchema.parse({
-        id: newId(), name, description: description || undefined, group: group || undefined, section: section || undefined, order, createdAt: now, updatedAt: now,
+    /** afterId を渡すと、その項目の直後に入れ、グループと小見出しも同じにする（group・section を渡せばそちらを優先） */
+    async addProblem(name: string, description?: string, group?: string, section?: string, opts: { afterId?: string; asFactor?: boolean } = {}): Promise<Problem> {
+      return d.transaction('rw', d.problems, async () => {
+        const now = Date.now();
+        const all = await d.problems.orderBy('order').toArray();
+        const after = opts.afterId ? all.find((x) => x.id === opts.afterId) : undefined;
+        if (opts.afterId && !after) throw new Error('指定した項目が見つかりません');
+        const p = ProblemSchema.parse({
+          id: newId(), name, description: description || undefined,
+          group: group || after?.group || undefined, section: section || (group ? undefined : after?.section) || undefined,
+          ...(opts.asFactor ? { asFactor: true } : {}),
+          order: all.reduce((m, x) => Math.max(m, x.order), -1) + 1, createdAt: now, updatedAt: now,
+        });
+        if (!after) { await d.problems.add(p); return p; }
+        // 直後に入れるため、並び順を振り直す
+        const list = [...all];
+        list.splice(list.findIndex((x) => x.id === after.id) + 1, 0, p);
+        await d.problems.add(p);
+        for (const [i, x] of list.entries()) if (x.order !== i) await d.problems.update(x.id, { order: i });
+        return { ...p, order: list.indexOf(p) };
       });
-      await d.problems.add(p);
-      return p;
     },
     async updateProblem(id: string, patch: Partial<Pick<Problem, 'name' | 'description' | 'order' | 'group' | 'section' | 'noteLabel' | 'noteAlways' | 'pairedApproachId' | 'asFactor'>>) {
       await d.transaction('rw', d.problems, async () => {

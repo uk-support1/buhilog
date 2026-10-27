@@ -72,3 +72,14 @@ export function convertDayFactors(
   }
   return { problems: ps, approaches: as, entries: es, changed };
 }
+
+/** 朝要因の「出社前の活動（やる気）」（5段階・5が良い）。なければ足す（何度実行しても同じ結果） */
+export const MORNING_MOTIVATION = { name: '出社前の活動（やる気）', description: '5＝やる気満々 〜 1＝やる気が出ない', group: '朝要因' } as const;
+export function ensureMorningMotivation(problems: Problem[], newId: () => string, now: number): { problems: Problem[]; changed: boolean } {
+  if (problems.some((p) => p.name === MORNING_MOTIVATION.name)) return { problems, changed: false };
+  const p: Problem = {
+    id: newId(), name: MORNING_MOTIVATION.name, description: MORNING_MOTIVATION.description, group: MORNING_MOTIVATION.group, asFactor: true,
+    order: problems.reduce((m, x) => Math.max(m, x.order), -1) + 1, createdAt: now, updatedAt: now,
+  };
+  return { problems: [...problems, p], changed: true };
+}

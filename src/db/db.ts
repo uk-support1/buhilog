@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { legacyRatingToNew } from '../domain/scale';
-import { convertDayFactors } from '../domain/dayFactors';
+import { convertDayFactors, ensureMorningMotivation } from '../domain/dayFactors';
 import { ensureVitalitySigns } from '../domain/signs';
 import { ensureMedications } from '../domain/medications';
 import type { AppSettings, Approach, CalendarEvent, DailyEntry, Medication, Problem } from '../domain/types';
@@ -128,6 +128,21 @@ export class BuhiLogDB extends Dexie {
       })
       .upgrade(async (tx) => {
         await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 7; });
+      });
+    // v8: 朝要因に「出社前の活動（やる気）」（5段階）を足す。ほかの記録には触れない。
+    this.version(8)
+      .stores({
+        problems: 'id, order, archivedAt',
+        approaches: 'id, archivedAt',
+        dailyEntries: 'id, &localDate',
+        settings: 'key',
+        medications: 'id, order, archivedAt',
+        events: 'id, date',
+      })
+      .upgrade(async (tx) => {
+        const r = ensureMorningMotivation(await tx.table('problems').toArray(), () => crypto.randomUUID(), Date.now());
+        if (r.changed) await tx.table('problems').add(r.problems[r.problems.length - 1]);
+        await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 8; });
       });
   }
 }
