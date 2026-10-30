@@ -173,3 +173,30 @@ describe('時刻の選択（時と分の2つのメーター）', () => {
     expect(within(screen.getByRole('listbox', { name: '終了時刻の分' })).getByRole('option', { name: '32分' })).toBeTruthy();
   });
 });
+
+import { copyEventTo } from '../src/domain/schedule';
+describe('複数の日にコピー', () => {
+  it('複数日の予定は日数を保ち、繰り返しの終了日も同じだけずれる。uid・除外日は引き継がない', () => {
+    const c = copyEventTo({ title: '研修', date: '2026-11-20', endDate: '2026-11-21', allDay: true, uid: 'u', exdates: ['2026-11-27'], repeat: { freq: 'weekly', interval: 1, until: '2026-12-20' } }, '2026-12-01');
+    expect(c).toMatchObject({ date: '2026-12-01', endDate: '2026-12-02', repeat: { until: '2026-12-31' } });
+    expect(c.uid).toBeUndefined();
+    expect(c.exdates).toBeUndefined();
+  });
+  it('画面で複数の日を選ぶと、元の日と選んだ日すべてに同じ予定ができる', async () => {
+    const repo = createRepo(new BuhiLogDB('cal-copy'));
+    const user = userEvent.setup();
+    render(<Calendar repo={repo} initialDate="2026-11-10" />);
+    await user.click(await screen.findByRole('button', { name: /この日に予定を追加/ }));
+    await user.type(screen.getByLabelText('予定の名前'), '通院');
+    await user.click(screen.getByText(/ほかの日にも同じ予定を入れる/));
+    const picker = screen.getByRole('group', { name: 'コピー先の日を選ぶ' });
+    await user.click(within(picker).getByRole('button', { name: '11月12日（木）' }));
+    await user.click(within(picker).getByRole('button', { name: '11月17日（火）' }));
+    expect(within(picker).getByRole('button', { name: '11月10日（火）（元の日）' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: '保存して、2日にもコピーする' }));
+    await screen.findByRole('region', { name: '11月10日（火）の予定' });
+    const list = await repo.listEvents();
+    expect(list.map((e) => e.date).sort()).toEqual(['2026-11-10', '2026-11-12', '2026-11-17']);
+    expect(list.every((e) => e.title === '通院')).toBe(true);
+  });
+});

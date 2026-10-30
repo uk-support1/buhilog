@@ -169,3 +169,7 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 .wheel li.sel { color:var(--fg); font-weight:800; font-size:1.3rem; }
 .band { position:absolute; left:0; right:0; top:88px; height:44px; border-radius:12px; background:var(--accent-soft); z-index:-1; }
 .band { z-index:0; } .wheel { position:relative; z-index:1; }
+/* 複数の日にコピー */
+.copydates { margin:12px 0; } .copydates summary { font-weight:700; cursor:pointer; padding:6px 0; }
+.calgrid.mini .day { min-height:40px; } .calgrid.mini .day.pick { background:var(--accent-soft); box-shadow:0 0 0 2px var(--accent); } .calgrid.mini .day:disabled { opacity:.35; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; } .chip { padding:4px 10px; min-height:32px; font-size:.85rem; }

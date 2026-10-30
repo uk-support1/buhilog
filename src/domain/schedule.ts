@@ -122,3 +122,14 @@ export const COLOR_HEX: Record<EventColor, string> = { blue: '#3aa0e0', pink: '#
 export const colorOf = (e: { color?: keyof typeof COLOR_HEX }) => COLOR_HEX[e.color ?? 'brown'];
 export const REPEAT_LABEL = { daily: '毎日', weekly: '毎週', monthly: '毎月', yearly: '毎年' } as const;
 export const WEEKDAY_LABEL = ['日', '月', '火', '水', '木', '金', '土'] as const;
+
+/** 予定を別の日にコピーする（複数日の予定は日数を保ち、繰り返しの終了日も同じだけずらす。元ID・除外日は引き継がない） */
+export function copyEventTo(ev: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>, date: string): Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'> {
+  const off = daysBetween(ev.date, date);
+  const { uid: _u, exdates: _x, ...rest } = ev;
+  return {
+    ...rest, date, source: 'manual',
+    ...(ev.endDate ? { endDate: addDays(ev.endDate, off) } : {}),
+    ...(ev.repeat ? { repeat: { ...ev.repeat, ...(ev.repeat.until ? { until: addDays(ev.repeat.until, off) } : {}) } } : {}),
+  };
+}

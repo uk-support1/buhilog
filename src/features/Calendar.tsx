@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { addDays, formatJa, toLocalDate } from '../domain/date';
-import { COLOR_HEX, COLOR_LABEL, colorOf, eventsInRange, eventsOn, REPEAT_LABEL, timeLabel, WEEKDAY_LABEL, weekdayOf, type Occurrence } from '../domain/schedule';
+import { COLOR_HEX, COLOR_LABEL, colorOf, copyEventTo, eventsInRange, eventsOn, REPEAT_LABEL, timeLabel, WEEKDAY_LABEL, weekdayOf, type Occurrence } from '../domain/schedule';
 import { EVENT_COLORS, type CalendarEvent, type Repeat } from '../domain/types';
 import { holidayName } from '../domain/holidays';
 import { parseIcs, type IcsResult } from '../domain/ics';
+import { CopyDates } from './CopyDates';
 import { WheelTime } from '../ui/WheelTime';
 
 type Freq = '' | Repeat['freq'];
@@ -19,6 +20,7 @@ interface Draft {
   place: string;
   memo: string;
   color: string;
+  copyDates: string[];
   freq: Freq;
   interval: string;
   weekdays: number[];
@@ -29,10 +31,10 @@ interface Draft {
   createdAt?: number;
 }
 
-const newDraft = (date: string): Draft => ({ title: '', date, endDate: '', allDay: false, startTime: '', endTime: '', place: '', memo: '', color: 'brown', freq: '', interval: '1', weekdays: [], until: '' });
+const newDraft = (date: string): Draft => ({ title: '', date, endDate: '', allDay: false, startTime: '', endTime: '', place: '', memo: '', color: 'brown', copyDates: [], freq: '', interval: '1', weekdays: [], until: '' });
 const fromEvent = (e: CalendarEvent): Draft => ({
   id: e.id, title: e.title, date: e.date, endDate: e.endDate ?? '', allDay: e.allDay, startTime: e.startTime ?? '', endTime: e.endTime ?? '',
-  place: e.place ?? '', memo: e.memo ?? '', color: e.color ?? 'brown', freq: e.repeat?.freq ?? '', interval: String(e.repeat?.interval ?? 1), weekdays: e.repeat?.weekdays ?? [],
+  place: e.place ?? '', memo: e.memo ?? '', color: e.color ?? 'brown', copyDates: [], freq: e.repeat?.freq ?? '', interval: String(e.repeat?.interval ?? 1), weekdays: e.repeat?.weekdays ?? [],
   until: e.repeat?.until ?? '', exdates: e.exdates, uid: e.uid, source: e.source,
 });
 
@@ -90,8 +92,7 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
     const interval = Number(draft.interval);
     if (draft.freq && (!Number.isInteger(interval) || interval < 1)) { setErr('繰り返しの間隔は、1以上の整数にしてください。'); return; }
     try {
-      await repo.saveEvent({
-        ...(draft.id ? { id: draft.id } : {}),
+      const input = {
         title: draft.title,
         date: draft.date,
         endDate: draft.endDate || undefined,
@@ -107,7 +108,11 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
         exdates: draft.exdates?.length ? draft.exdates : undefined,
         uid: draft.uid,
         source: draft.source ?? 'manual',
-      });
+      } as const;
+      await repo.saveEvent({ ...(draft.id ? { id: draft.id } : {}), ...input });
+      // ほかの日へのコピー（元の日と重複する日は除く）
+      const targets = draft.copyDates.filter((d) => d !== draft.date);
+      if (targets.length) await repo.importEvents(targets.map((d) => copyEventTo({ ...input, uid: undefined }, d)));
       setSelected(draft.date);
       setMonth(monthStart(draft.date));
       setDraft(null);
@@ -232,8 +237,9 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
               <label className="field">くりかえしの終わり（空欄なら、ずっと）<input type="date" value={draft.until} min={draft.date} onChange={(e) => set({ until: e.target.value })} /></label>
             </>
           )}
+          <CopyDates base={draft.date} value={draft.copyDates} onChange={(v) => set({ copyDates: v })} />
           {err && <p role="alert" className="err">{err}</p>}
-          <button type="button" className="primary" onClick={save}>保存する</button>
+          <button type="button" className="primary" onClick={save}>{draft.copyDates.length ? `保存して、${draft.copyDates.length}日にもコピーする` : '保存する'}</button>
           <div className="row wrap">
             <button type="button" onClick={() => { setDraft(null); setErr(''); }}>キャンセル</button>
             {draft.id && editingOcc && editingOcc.event.repeat && (
