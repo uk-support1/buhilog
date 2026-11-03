@@ -174,3 +174,4 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 .calgrid.mini .day { min-height:40px; } .calgrid.mini .day.pick { background:var(--accent-soft); box-shadow:0 0 0 2px var(--accent); } .calgrid.mini .day:disabled { opacity:.35; }
 .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; } .chip { padding:4px 10px; min-height:32px; font-size:.85rem; }
 .soreness { margin:6px 0; } .soreness .seg { margin-top:4px; }
+.caltop { margin-bottom:8px; justify-content:flex-end; } .caltop .addtop { width:auto; flex:0 0 auto; min-height:44px; padding:8px 18px; }
