@@ -46,7 +46,7 @@ export function Review({ repo }: { repo: Repo }) {
   );
   // 5段階で記録する要因（日中要因の3項目など）も、ほかの困りごとの要因として比べる
   const ratedFactors: RatedFactorDef[] = useMemo(
-    () => problems.filter((p) => p.asFactor && !p.archivedAt && !p.pairedApproachId).map((p) => ({ id: p.id, name: p.name, group: p.group })),
+    () => problems.filter((p) => p.asFactor && !p.archivedAt && !p.pairedApproachId).map((p) => ({ id: p.id, name: p.name, group: p.group, reverse: p.reverse })),
     [problems],
   );
   const rank = useMemo(() => (pid ? rankFactors(entries, approaches, pid, end, period, signals, ratedFactors) : null), [entries, approaches, pid, end, period, signals, ratedFactors]);

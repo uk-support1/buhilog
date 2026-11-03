@@ -4,15 +4,17 @@ interface Props {
   label: string;
   value: number | null | undefined;
   onChange: (v: number | null) => void;
+  /** true: 大きいほど良くない項目（5が赤、1が緑の色にする） */
+  reverse?: boolean;
 }
 
 /** 困りごとの点数（1〜5。5＝いちばん良い、1＝調子が悪い）。未入力(null)は別に選べる。 */
-export function ScoreInput({ label, value, onChange }: Props) {
+export function ScoreInput({ label, value, onChange, reverse }: Props) {
   const nums = Array.from({ length: PROBLEM_MAX - PROBLEM_MIN + 1 }, (_, i) => PROBLEM_MIN + i);
   return (
     <div role="radiogroup" aria-label={label} className="rating score">
       {nums.map((n) => (
-        <button key={n} type="button" role="radio" aria-checked={value === n} className={`s${n} ${value === n ? 'sel' : ''}`} onClick={() => onChange(n)}>
+        <button key={n} type="button" role="radio" aria-checked={value === n} className={`s${reverse ? PROBLEM_MAX + PROBLEM_MIN - n : n} ${value === n ? 'sel' : ''}`} onClick={() => onChange(n)}>
           {n}
         </button>
       ))}

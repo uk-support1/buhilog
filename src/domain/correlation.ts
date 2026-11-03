@@ -95,7 +95,7 @@ interface Series { key: string; name: string; group: string; kind: Candidate['ki
 /** いきいきサイン（状態=点数 と「意識した」の対）。要因の候補にも使う */
 export interface SignalDef { id: string; name: string; approachId?: string }
 /** 5段階で記録する要因（日中の過ごし方など）。点数そのものを要因として比べる */
-export interface RatedFactorDef { id: string; name: string; group?: string }
+export interface RatedFactorDef { id: string; name: string; group?: string; /** true: 点数が大きいほど良くない項目（比べるときは向きを反転する） */ reverse?: boolean }
 
 function buildSeries(approaches: Approach[], signals: SignalDef[], targetId: string, rated: RatedFactorDef[]): Series[] {
   const list: Series[] = [];
@@ -127,7 +127,10 @@ function buildSeries(approaches: Approach[], signals: SignalDef[], targetId: str
   }
   for (const f of rated) {
     if (f.id === targetId) continue;
-    list.push({ key: `f:${f.id}`, name: f.name, group: f.group || 'その他', kind: 'rated', more: '良い', binary: false, value: (e) => e.problemRatings[f.id] ?? null });
+    list.push({
+      key: `f:${f.id}`, name: f.reverse ? `${f.name}の少なさ` : f.name, group: f.group || 'その他', kind: 'rated', more: '良い', binary: false,
+      value: (e) => { const r = e.problemRatings[f.id]; return r == null ? null : f.reverse ? 6 - r : r; }, // 反転: 少ないほど高い（良い）
+    });
   }
   list.push(
     sleep('s:hours', '睡眠時間', '長い', (e) => e.sleepHours ?? null),

@@ -3,6 +3,7 @@ import type { Repo } from './repo';
 import type { BuhiLogDB } from './db';
 import { convertLegacyRatings } from '../domain/scale';
 import { convertDayFactors, ensureMorningMotivation } from '../domain/dayFactors';
+import { applyV9 } from '../domain/v9';
 import { ensureMedications } from '../domain/medications';
 import { ensureVitalitySigns } from '../domain/signs';
 import {
@@ -74,6 +75,15 @@ function normalizeOlder(json: unknown): void {
   // v8: 朝要因の「出社前の活動（やる気）」
   if (j.settings && (j.settings.schemaVersion ?? 0) < 8 && Array.isArray(j.problems)) {
     (j as { problems: Problem[] }).problems = ensureMorningMotivation(j.problems as unknown as Problem[], () => crypto.randomUUID(), Date.now()).problems;
+  }
+  // v9: ボタンの名前・筋肉痛・足と肩の分割・マルチタスクの向き・「生き生き」
+  if (j.settings && (j.settings.schemaVersion ?? 0) < 9 && Array.isArray(j.problems)) {
+    const h = j as { problems: Problem[]; approaches?: Approach[]; dailyEntries?: DailyEntry[]; settings: { groupOrder?: string[] } };
+    const r = applyV9({ problems: h.problems, approaches: h.approaches ?? [], entries: h.dailyEntries ?? [], groupOrder: h.settings.groupOrder }, () => crypto.randomUUID(), Date.now());
+    h.problems = r.problems;
+    h.approaches = r.approaches;
+    h.dailyEntries = r.entries;
+    if (r.groupOrder) h.settings.groupOrder = r.groupOrder;
   }
   if (j.settings) j.settings.schemaVersion = SCHEMA_VERSION;
 }
@@ -150,7 +160,7 @@ export function csvCell(v: string | number): string {
   return `"${s.replace(/"/g, '""')}"`;
 }
 
-const STATUS_JA = { done: '実施した', not_done: '実施しなかった', unknown: '未回答' } as const;
+const STATUS_JA = { done: '実施した', not_done: '実施しなかった', sore: '筋肉痛', unknown: '未回答' } as const;
 
 export function buildCsv(b: Backup): string {
   const pname = new Map(b.problems.map((p) => [p.id, p.name]));
@@ -161,7 +171,9 @@ export function buildCsv(b: Backup): string {
     for (const [id, s] of Object.entries(e.approachStatuses)) {
       const q = e.approachQuantities?.[id];
       const unit = b.approaches.find((a) => a.id === id)?.quantity?.unit ?? '';
-      rows.push([e.localDate, 'アプローチ', aname.get(id) ?? id, STATUS_JA[s], q != null ? `${q}${unit}` : '']);
+      const sore = e.approachSoreness?.[id];
+      const note = e.approachNotes?.[id];
+      rows.push([e.localDate, 'アプローチ', aname.get(id) ?? id, s === 'sore' && sore != null ? `筋肉痛(${sore}/5)` : STATUS_JA[s], [q != null ? `${q}${unit}` : '', note ?? ''].filter(Boolean).join(' / ')]);
     }
     if (e.sleepHours != null) rows.push([e.localDate, '生活', '睡眠時間(時間)', e.sleepHours, '']);
     if (e.bedtime) rows.push([e.localDate, '睡眠', '就寝時刻', e.bedtime, '']);
