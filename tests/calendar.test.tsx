@@ -200,3 +200,14 @@ describe('複数の日にコピー', () => {
     expect(list.every((e) => e.title === '通院')).toBe(true);
   });
 });
+
+describe('カレンダー上の「予定を追加」ボタン', () => {
+  it('カレンダーの上のボタンから、選んでいる日の入力欄が開く', async () => {
+    const repo = createRepo(new BuhiLogDB('cal-top'));
+    const user = userEvent.setup();
+    render(<Calendar repo={repo} initialDate="2026-11-10" />);
+    await user.click(await screen.findByRole('button', { name: '＋ 予定を追加' }));
+    expect(screen.getByRole('region', { name: '予定を追加' })).toBeInTheDocument();
+    expect((screen.getByLabelText('開始日') as HTMLInputElement).value).toBe('2026-11-10');
+  });
+});

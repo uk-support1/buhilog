@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { addDays, formatJa, toLocalDate } from '../domain/date';
 import { COLOR_HEX, COLOR_LABEL, colorOf, copyEventTo, eventsInRange, eventsOn, REPEAT_LABEL, timeLabel, WEEKDAY_LABEL, weekdayOf, type Occurrence } from '../domain/schedule';
@@ -55,6 +55,10 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
   const [err, setErr] = useState('');
   const [ics, setIcs] = useState<(IcsResult & { name: string }) | null>(null);
   const [icsMsg, setIcsMsg] = useState('');
+  const formRef = useRef<HTMLElement>(null);
+  // 入力欄が開いたら、画面の上のほうへ動かす（カレンダーの上のボタンから開いても、すぐ入力できるように）
+  const formOpen = !!draft;
+  useEffect(() => { if (formOpen) formRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }); }, [formOpen]);
 
   const pickIcs = async (file: File | undefined) => {
     setIcsMsg('');
@@ -143,6 +147,9 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
   return (
     <div>
       <section className="card cal">
+        <div className="row caltop">
+          <button type="button" className="primary addtop" onClick={() => setDraft(newDraft(selected))}>＋ 予定を追加</button>
+        </div>
         <div className="calhead">
           <button type="button" aria-label="前の月" onClick={() => setMonth(shiftMonth(month, -1))}>◀</button>
           <h2>{y}年{m}月</h2>
@@ -193,7 +200,7 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
       </section>
 
       {draft && (
-        <section className="card evform" aria-label={draft.id ? '予定を編集' : '予定を追加'}>
+        <section className="card evform" ref={formRef} aria-label={draft.id ? '予定を編集' : '予定を追加'}>
           <h2>{draft.id ? '予定を編集' : '予定を追加'}</h2>
           <label className="field">予定の名前<input value={draft.title} maxLength={100} onChange={(e) => set({ title: e.target.value })} placeholder="例: 通院" /></label>
           <div className="two">
