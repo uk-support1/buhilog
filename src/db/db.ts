@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie';
 import { legacyRatingToNew } from '../domain/scale';
 import { convertDayFactors, ensureMorningMotivation } from '../domain/dayFactors';
 import { ensureVitalitySigns } from '../domain/signs';
+import { applyV9 } from '../domain/v9';
 import { ensureMedications } from '../domain/medications';
 import type { AppSettings, Approach, CalendarEvent, DailyEntry, Medication, Problem } from '../domain/types';
 
@@ -143,6 +144,30 @@ export class BuhiLogDB extends Dexie {
         const r = ensureMorningMotivation(await tx.table('problems').toArray(), () => crypto.randomUUID(), Date.now());
         if (r.changed) await tx.table('problems').add(r.problems[r.problems.length - 1]);
         await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 8; });
+      });
+    // v9: ボタンの名前・筋肉痛・足と肩の分割・マルチタスクの向き・「生き生き」への名称変更（記録の削除はしない）
+    this.version(9)
+      .stores({
+        problems: 'id, order, archivedAt',
+        approaches: 'id, archivedAt',
+        dailyEntries: 'id, &localDate',
+        settings: 'key',
+        medications: 'id, order, archivedAt',
+        events: 'id, date',
+      })
+      .upgrade(async (tx) => {
+        const st = await tx.table('settings').get('app');
+        const r = applyV9(
+          { problems: await tx.table('problems').toArray(), approaches: await tx.table('approaches').toArray(), entries: await tx.table('dailyEntries').toArray(), groupOrder: st?.groupOrder },
+          () => crypto.randomUUID(), Date.now(),
+        );
+        await tx.table('problems').bulkPut(r.problems);
+        await tx.table('approaches').bulkPut(r.approaches);
+        await tx.table('dailyEntries').bulkPut(r.entries);
+        await tx.table('settings').toCollection().modify((s: { schemaVersion?: number; groupOrder?: string[] }) => {
+          s.schemaVersion = 9;
+          if (r.groupOrder) s.groupOrder = r.groupOrder;
+        });
       });
   }
 }

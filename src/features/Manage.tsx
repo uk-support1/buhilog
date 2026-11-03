@@ -94,6 +94,13 @@ export function Manage({ repo }: { repo: Repo }) {
                 </small>
               </span>
               <button onClick={() => { const g = askGroup(a); if (g) void run(() => repo.updateApproach(a.id, g)); }}>グループ</button>
+              <button onClick={() => {
+                const d = prompt('「実施した」側のボタンの名前（例: 飲んだ）。空欄で「実施した」に戻す', a.doneLabel ?? '');
+                if (d === null) return;
+                const n = prompt('「実施しなかった」側のボタンの名前（例: 飲んでない）。空欄で「実施しなかった」に戻す', a.notDoneLabel ?? '');
+                if (n === null) return;
+                void run(() => repo.updateApproach(a.id, { doneLabel: d.trim() || undefined, notDoneLabel: n.trim() || undefined }));
+              }}>ボタン名</button>
               <button onClick={() => setLinkEditId(linkEditId === a.id ? null : a.id)}>対象を変更</button>
               <button onClick={() => { const n = rename(a.name); if (n) void run(() => repo.updateApproach(a.id, { name: n })); }}>名前変更</button>
               <button onClick={() => run(() => repo.setApproachArchived(a.id, true))}>アーカイブ</button>

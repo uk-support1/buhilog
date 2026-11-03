@@ -23,6 +23,10 @@ interface Form {
   awake: string[];
   /** 実施した項目の量（杯・回数）。approachId → 入力文字 */
   quantities: Record<string, string>;
+  /** 筋肉痛の強さ（approachId → 1〜5） */
+  soreness: Record<string, number>;
+  /** 「実施した」項目のメモ（approachId → 文字） */
+  aNotes: Record<string, string>;
   /** 服薬（medicationId → 量(mg) または 1=飲んだ/0=飲まなかった。空=未入力） */
   meds: Record<string, string>;
   /** ストレスは画面から外したが、過去データは保持する */
@@ -34,11 +38,11 @@ interface Form {
 // 就寝・起床は未入力から始める。23:00 / 7:00 は「初期値の表示」（選択画面の開始位置）で、触るまでは入力済みにしない
 const emptyForm = (): Form => ({
   ratings: {}, notes: {}, statuses: {}, sleep: '', bed: '', wake: '', nap: '',
-  awake: Array(5).fill(''), quantities: {}, meds: {}, stress: null, noteEvents: '', noteInsights: '', noteOther: '',
+  awake: Array(5).fill(''), quantities: {}, soreness: {}, aNotes: {}, meds: {}, stress: null, noteEvents: '', noteInsights: '', noteOther: '',
 });
 
-const STATUS_LABEL: Record<ApproachStatus, string> = { done: '実施した', not_done: '実施しなかった', unknown: '未回答' };
-const PRACTICE_LABEL: Record<ApproachStatus, string> = { done: '意識した', not_done: '意識しなかった', unknown: '未回答' };
+const STATUS_LABEL: Record<ApproachStatus, string> = { done: '実施した', not_done: '実施しなかった', sore: '筋肉痛', unknown: '未回答' };
+const PRACTICE_LABEL: Record<ApproachStatus, string> = { done: '意識した', not_done: '意識しなかった', sore: '筋肉痛', unknown: '未回答' };
 const MEMO_TAB = '__memo__';
 
 export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initialDate?: string; onOpenCalendar?: (date: string) => void }) {
@@ -79,6 +83,8 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
               nap: e.napHours != null ? String(e.napHours) : '',
               awake: Array.from({ length: 5 }, (_, i) => (e.awakenings?.[i] != null ? String(e.awakenings[i]) : '')),
               quantities: Object.fromEntries(Object.entries(e.approachQuantities ?? {}).map(([k, v]) => [k, String(v)])),
+              soreness: { ...(e.approachSoreness ?? {}) },
+              aNotes: { ...(e.approachNotes ?? {}) },
               meds: Object.fromEntries(Object.entries(e.medIntake ?? {}).map(([k, v]) => [k, String(v)])),
               stress: e.stressRating ?? null,
               noteEvents: e.noteEvents ?? '',
@@ -135,6 +141,14 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
       if (!Number.isInteger(n) || n < 1 || n > 9999) { setErr(`「${a.name}」の量は、1以上の整数で入力してください。`); return; }
       quantities[a.id] = n;
     }
+    // 筋肉痛の強さは「筋肉痛」を選んだ項目だけ、メモは「実施した」項目だけ保存する
+    const soreness: Record<string, number> = {};
+    const aNotes: Record<string, string> = {};
+    for (const a of approaches) {
+      if (form.statuses[a.id] === 'sore' && form.soreness[a.id]) soreness[a.id] = form.soreness[a.id];
+      const note = (form.aNotes[a.id] ?? '').trim();
+      if (a.noteLabel && form.statuses[a.id] === 'done' && note) aNotes[a.id] = note;
+    }
     const medIntake: Record<string, number> = {};
     for (const m of medications) {
       const raw = form.meds[m.id];
@@ -150,6 +164,8 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
         problemNotes: Object.fromEntries(Object.entries(form.notes).filter(([, v]) => v.trim() !== '')),
         approachStatuses: form.statuses,
         approachQuantities: Object.keys(quantities).length ? quantities : undefined,
+        approachSoreness: Object.keys(soreness).length ? soreness : undefined,
+        approachNotes: Object.keys(aNotes).length ? aNotes : undefined,
         medIntake: Object.keys(medIntake).length ? medIntake : undefined,
         sleepHours: sleepNum,
         bedtime: form.bed || undefined,
@@ -177,6 +193,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
       <ScoreInput
         label={`${p.name}の調子`}
         value={form.ratings[p.id]}
+        reverse={p.reverse}
         onChange={(v) => edit((f) => ({ ...f, ratings: { ...f.ratings, [p.id]: v } }))}
       />
       {approachOf(p.pairedApproachId) && practiceRow(approachOf(p.pairedApproachId)!)}
@@ -310,7 +327,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
     <div role="radiogroup" aria-label={a.name} className="approach-row" key={a.id}>
       <div className="name">{a.name}</div>
       <div className="seg">
-        {(['done', 'not_done', 'unknown'] as ApproachStatus[]).map((s) => (
+        {((a.sore ? ['done', 'not_done', 'sore', 'unknown'] : ['done', 'not_done', 'unknown']) as ApproachStatus[]).map((s) => (
           <button
             key={s}
             type="button"
@@ -319,10 +336,27 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
             className={(form.statuses[a.id] ?? 'unknown') === s ? 'sel' : ''}
             onClick={() => edit((f) => ({ ...f, statuses: { ...f.statuses, [a.id]: s } }))}
           >
-            {STATUS_LABEL[s]}
+            {s === 'done' ? a.doneLabel || STATUS_LABEL.done : s === 'not_done' ? a.notDoneLabel || STATUS_LABEL.not_done : STATUS_LABEL[s]}
           </button>
         ))}
       </div>
+      {a.sore && form.statuses[a.id] === 'sore' && (
+        <div role="radiogroup" aria-label={`${a.name}の筋肉痛の強さ`} className="soreness">
+          <span className="muted small">筋肉痛の強さ（1＝ほんのり 〜 5＝かなり強い）</span>
+          <div className="seg">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button key={n} type="button" role="radio" aria-checked={form.soreness[a.id] === n} className={form.soreness[a.id] === n ? 'sel' : ''}
+                onClick={() => edit((f) => ({ ...f, soreness: { ...f.soreness, [a.id]: n } }))}>{n}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      {a.noteLabel && form.statuses[a.id] === 'done' && (
+        <label className="field">{a.noteLabel}
+          <textarea aria-label={`${a.name}のメモ`} rows={2} maxLength={2000} value={form.aNotes[a.id] ?? ''}
+            onChange={(e) => edit((f) => ({ ...f, aNotes: { ...f.aNotes, [a.id]: e.target.value } }))} />
+        </label>
+      )}
       {a.quantity && form.statuses[a.id] === 'done' && (
         <label className="qty">
           {a.quantity.unit === '回' ? '回数' : `量（${a.quantity.unit}）`}

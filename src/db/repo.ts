@@ -77,7 +77,7 @@ export function createRepo(d: BuhiLogDB = db) {
       await d.approaches.add(a);
       return a;
     },
-    async updateApproach(id: string, patch: Partial<Pick<Approach, 'name' | 'notes' | 'linkedProblemIds' | 'group' | 'section' | 'quantity'>>) {
+    async updateApproach(id: string, patch: Partial<Pick<Approach, 'name' | 'notes' | 'linkedProblemIds' | 'group' | 'section' | 'quantity' | 'doneLabel' | 'notDoneLabel' | 'sore' | 'noteLabel'>>) {
       await d.transaction('rw', d.approaches, async () => {
         const cur = await d.approaches.get(id);
         if (!cur) throw new Error('アプローチが見つかりません');

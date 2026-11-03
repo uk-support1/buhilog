@@ -6,7 +6,7 @@ import type { Approach, Problem } from './types';
  *   ・意識して整えると気分が上がる「きっかけ」にもなる（行動: 意識した/しなかった）
  * という2つの面をもつ項目。原因と結果が混ざらないよう、2つの面を別々に記録する。
  */
-export const SIGN_GROUP = 'いきいきサイン';
+export const SIGN_GROUP = '生き生き';
 export const SIGN_INTRO =
   '生き生きしているときに自然に出る「合図」であり、意識して整えると気分が上がる「きっかけ」にもなる項目です。「意識したか」と「自然にできていた度合い」を、分けて記録します。';
 

@@ -25,6 +25,8 @@ export const ProblemSchema = z.object({
   pairedApproachId: z.string().min(1).max(64).optional(),
   /** この項目の点数は、ほかの困りごとの「要因」としても比べる（例: 日中の過ごし方を5段階で記録する項目） */
   asFactor: z.boolean().optional(),
+  /** true: 点数が大きいほど良くない項目（例: マルチタスク 1＝やらなかった 〜 5＝やってしまった）。色・比較の向きを逆にする */
+  reverse: z.boolean().optional(),
   order: z.number().int(),
   archivedAt: ts.optional(),
   createdAt: ts,
@@ -42,6 +44,13 @@ export const ApproachSchema = z.object({
   quantity: z
     .object({ unit: z.string().trim().min(1).max(10), mode: z.enum(['select', 'number']), max: z.number().int().min(1).max(1000).optional() })
     .optional(),
+  /** 「実施した」側・「しなかった」側のボタンの名前（例: 飲んだ／飲んでない）。なければ「実施した／実施しなかった」 */
+  doneLabel: z.string().trim().max(MAX_NAME).optional(),
+  notDoneLabel: z.string().trim().max(MAX_NAME).optional(),
+  /** true: 「筋肉痛」も選べる（選ぶと強さを5段階で記録） */
+  sore: z.boolean().optional(),
+  /** 「実施した」を選んだとき、下に出すメモ欄の呼び名（例: どんな筋トレをしたか） */
+  noteLabel: z.string().trim().max(MAX_NAME).optional(),
   linkedProblemIds: z.array(id),
   archivedAt: ts.optional(),
   createdAt: ts,
@@ -49,7 +58,7 @@ export const ApproachSchema = z.object({
 });
 export type Approach = z.infer<typeof ApproachSchema>;
 
-export const ApproachStatusSchema = z.enum(['done', 'not_done', 'unknown']);
+export const ApproachStatusSchema = z.enum(['done', 'not_done', 'sore', 'unknown']);
 export type ApproachStatus = z.infer<typeof ApproachStatusSchema>;
 
 /** null = 未入力（0とは別）。キーが無い場合も未入力 */
@@ -63,6 +72,10 @@ export const DailyEntrySchema = z.object({
   medIntake: z.record(z.string(), z.number().min(0).max(1000)).optional(),
   /** 実施した項目の量（杯・回数など）。approachId → 数 */
   approachQuantities: z.record(z.string(), z.number().int().min(1).max(9999)).optional(),
+  /** 筋肉痛の強さ（1＝ほんのり 〜 5＝かなり強い）。状態が「筋肉痛」の項目だけ */
+  approachSoreness: z.record(z.string(), z.number().int().min(1).max(5)).optional(),
+  /** 「実施した」項目のメモ（どんな筋トレをしたか、など） */
+  approachNotes: z.record(z.string(), z.string().max(MAX_TEXT)).optional(),
   /** 合計睡眠時間（夜＋昼寝）。就寝・起床があれば自動計算した値を保存 */
   sleepHours: z.number().min(0).max(24).optional(),
   bedtime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
@@ -154,7 +167,7 @@ export const AppSettingsSchema = z.object({
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: SCHEMA_VERSION,
   onboardingCompleted: false,

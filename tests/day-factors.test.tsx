@@ -81,11 +81,11 @@ describe('旧データの引き継ぎ（DB v4 → v5 / バックアップ）', (
     legacy.close();
     const repo = createRepo(new BuhiLogDB('legacy-v5'));
     const ps = await repo.listProblems(true);
-    const multi = ps.find((p) => p.name === 'マルチタスクをやらない')!;
-    expect(multi).toMatchObject({ group: '日中要因', asFactor: true });
+    const multi = ps.find((p) => p.name === 'マルチタスク')!; // v9 で「マルチタスクをやらない」→「マルチタスク」（向きが逆）
+    expect(multi).toMatchObject({ group: '日中要因', asFactor: true, reverse: true });
     const [e1, e2] = [await repo.getEntry('2026-05-01'), await repo.getEntry('2026-05-02')];
-    expect(e1?.problemRatings).toEqual({ p0: 4, [multi.id]: 4 });
-    expect(e2?.problemRatings).toEqual({ p0: 2, [multi.id]: 2 });
+    expect(e1?.problemRatings).toEqual({ p0: 4, [multi.id]: 2 }); // 4（良い）→ 6−4 ＝ 2（マルチタスクは少なめ）
+    expect(e2?.problemRatings).toEqual({ p0: 2, [multi.id]: 4 });
     expect(e1?.approachStatuses).toEqual({ y: 'done' }); // 朝ヨガは変わらない
     expect(e2?.approachStatuses).toEqual({ y: 'not_done' });
     expect((await repo.getSettings()).schemaVersion).toBe(SCHEMA_VERSION);
@@ -103,8 +103,8 @@ describe('旧データの引き継ぎ（DB v4 → v5 / バックアップ）', (
     const r = parseBackup(JSON.stringify(old));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    const multi = r.backup.problems.find((p) => p.name === 'マルチタスクをやらない')!;
-    expect(r.backup.dailyEntries[0].problemRatings[multi.id]).toBe(1);
+    const multi = r.backup.problems.find((p) => p.name === 'マルチタスク')!;
+    expect(r.backup.dailyEntries[0].problemRatings[multi.id]).toBe(5); // 旧「しなかった」＝1（マルチタスクをした）→ 反転して5（やってしまった）
     expect(r.backup.dailyEntries[0].approachStatuses).toEqual({});
   });
 });
