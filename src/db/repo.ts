@@ -69,15 +69,24 @@ export function createRepo(d: BuhiLogDB = db) {
       const all = (await d.approaches.toArray()).sort((a, b) => a.createdAt - b.createdAt);
       return includeArchived ? all : all.filter((a) => !a.archivedAt);
     },
-    async addApproach(name: string, linkedProblemIds: string[], notes?: string, group?: string, section?: string): Promise<Approach> {
+    async addApproach(name: string, linkedProblemIds: string[], notes?: string, group?: string, section?: string, opts: Pick<Partial<Approach>, 'underProblemId' | 'doneLabel' | 'notDoneLabel' | 'noteLabel'> = {}): Promise<Approach> {
       const now = Date.now();
+      // 困りごとの「すぐ下」に出す項目は、その困りごとの対策として結びつけ、グループ・小見出しも同じにする
+      const under = opts.underProblemId ? await d.problems.get(opts.underProblemId) : undefined;
+      if (opts.underProblemId && !under) throw new Error('指定した困りごとが見つかりません');
       const a = ApproachSchema.parse({
-        id: newId(), name, notes: notes || undefined, group: group || undefined, section: section || undefined, linkedProblemIds, createdAt: now, updatedAt: now,
+        id: newId(), name, notes: notes || undefined,
+        group: group || under?.group || undefined, section: section || (group ? undefined : under?.section) || undefined,
+        linkedProblemIds: under && !linkedProblemIds.includes(under.id) ? [...linkedProblemIds, under.id] : linkedProblemIds,
+        ...(opts.underProblemId ? { underProblemId: opts.underProblemId } : {}),
+        ...(opts.doneLabel ? { doneLabel: opts.doneLabel } : {}), ...(opts.notDoneLabel ? { notDoneLabel: opts.notDoneLabel } : {}),
+        ...(opts.noteLabel ? { noteLabel: opts.noteLabel } : {}),
+        createdAt: now, updatedAt: now,
       });
       await d.approaches.add(a);
       return a;
     },
-    async updateApproach(id: string, patch: Partial<Pick<Approach, 'name' | 'notes' | 'linkedProblemIds' | 'group' | 'section' | 'quantity' | 'doneLabel' | 'notDoneLabel' | 'sore' | 'noteLabel'>>) {
+    async updateApproach(id: string, patch: Partial<Pick<Approach, 'name' | 'notes' | 'linkedProblemIds' | 'group' | 'section' | 'quantity' | 'doneLabel' | 'notDoneLabel' | 'sore' | 'noteLabel' | 'underProblemId'>>) {
       await d.transaction('rw', d.approaches, async () => {
         const cur = await d.approaches.get(id);
         if (!cur) throw new Error('アプローチが見つかりません');
