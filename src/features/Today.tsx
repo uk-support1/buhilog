@@ -112,6 +112,8 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
   const grouped = hasNamedGroups(groups);
   // 「いきいきサイン」の「意識した」項目は、サインの中に入れて表示する（試したことの一覧には出さない）
   const paired = useMemo(() => pairedApproachIds(problems), [problems]);
+  // 困りごとの「すぐ下」に出す項目も、一覧には出さない
+  const inline = useMemo(() => new Set([...paired, ...approaches.filter((a) => a.underProblemId).map((a) => a.id)]), [paired, approaches]);
   const approachOf = (id?: string) => (id ? approaches.find((a) => a.id === id) : undefined);
   const activeTab = grouped ? (tab === MEMO_TAB || groups.some((g) => g.name === tab) ? tab : groups[0].name) : '';
 
@@ -224,6 +226,27 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
     );
   };
 
+  /** 困りごとの「すぐ下」に出す、〇／×の2択の項目。もう一度押すと未回答に戻る。〇のときだけメモ欄 */
+  const underRow = (a: Approach) => {
+    const cur = form.statuses[a.id] ?? 'unknown';
+    const pick = (s: ApproachStatus) => edit((f) => ({ ...f, statuses: { ...f.statuses, [a.id]: cur === s ? 'unknown' : s } }));
+    return (
+      <div role="radiogroup" aria-label={a.name} className="practice underrow" key={a.id}>
+        <span className="plabel">{a.name}</span>
+        <div className="seg">
+          <button type="button" role="radio" aria-checked={cur === 'done'} className={cur === 'done' ? 'sel' : ''} onClick={() => pick('done')}>{a.doneLabel || '〇'}</button>
+          <button type="button" role="radio" aria-checked={cur === 'not_done'} className={cur === 'not_done' ? 'sel' : ''} onClick={() => pick('not_done')}>{a.notDoneLabel || '×'}</button>
+        </div>
+        {a.noteLabel && cur === 'done' && (
+          <label className="field">{a.noteLabel}
+            <textarea aria-label={`${a.name}のメモ`} rows={2} maxLength={2000} value={form.aNotes[a.id] ?? ''}
+              onChange={(e) => edit((f) => ({ ...f, aNotes: { ...f.aNotes, [a.id]: e.target.value } }))} />
+          </label>
+        )}
+      </div>
+    );
+  };
+
   // 描画のたびに別コンポーネントにならないよう、関数として呼び出す（入力中のフォーカスを保つため）
   const problemBlock = (p: Problem, H: 'h2' | 'h3') => (
     <div className="item" aria-label={p.name} key={p.id}>
@@ -237,6 +260,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
       />
       {p.name === BOOST_PROBLEM_NAME && boostCard(p)}
       {approachOf(p.pairedApproachId) && practiceRow(approachOf(p.pairedApproachId)!)}
+      {approaches.filter((a) => a.underProblemId === p.id).map(underRow)}
       {rescueChips(p)}
       {p.noteAlways ? (
         <label className="field">
@@ -566,9 +590,9 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
                       {g.name === SIGN_GROUP && <p className="muted small">{SIGN_INTRO}</p>}
                       {s.problems.length > 0 && <p className="muted small">{PROBLEM_SCALE_LABEL}</p>}
                       {s.problems.map((p) => problemBlock(p, 'h3'))}
-                      {s.approaches.some((a) => !paired.has(a.id)) && <p className="muted small">「実施しなかった」と「未回答」は別のものとして扱います。</p>}
-                      {BULK_NOT_DONE_GROUPS.includes(g.name) && bulkButton(s.approaches.filter((a) => !paired.has(a.id)))}
-                      {s.approaches.filter((a) => !paired.has(a.id)).map(approachBlock)}
+                      {s.approaches.some((a) => !inline.has(a.id)) && <p className="muted small">「実施しなかった」と「未回答」は別のものとして扱います。</p>}
+                      {BULK_NOT_DONE_GROUPS.includes(g.name) && bulkButton(s.approaches.filter((a) => !inline.has(a.id)))}
+                      {s.approaches.filter((a) => !inline.has(a.id)).map(approachBlock)}
                     </section>
                   )),
                   medsCard(g.name),
@@ -582,11 +606,11 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
               <p className="muted small">{PROBLEM_SCALE_LABEL}</p>
             </section>
           ))}
-          {approaches.some((a) => !paired.has(a.id)) && (
+          {approaches.some((a) => !inline.has(a.id)) && (
             <section className="card">
               <h2>試したこと</h2>
               <p className="muted small">「実施しなかった」と「未回答」は別のものとして扱います。</p>
-              {approaches.filter((a) => !paired.has(a.id)).map(approachBlock)}
+              {approaches.filter((a) => !inline.has(a.id)).map(approachBlock)}
             </section>
           )}
           {medsCard(null)}

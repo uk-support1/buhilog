@@ -44,7 +44,7 @@ describe('困りごとを、選んだ項目の下に追加', () => {
     const a = await repo.addProblem('A', undefined, '人との関係');
     await repo.addProblem('B', undefined, '人との関係');
     render(<Manage repo={repo} />);
-    await screen.findByRole('option', { name: /Aの下/ });
+    await screen.findAllByRole('option', { name: /Aの下/ });
     await user.type(screen.getByLabelText('新しい困りごと'), 'Aの足');
     await user.selectOptions(screen.getByLabelText('この項目の下に入れる'), a.id);
     await user.click(within(screen.getByLabelText('新しい困りごと').closest('form')!).getByRole('button', { name: '追加' }));

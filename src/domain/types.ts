@@ -47,6 +47,8 @@ export const ApproachSchema = z.object({
   /** 「実施した」側・「しなかった」側のボタンの名前（例: 飲んだ／飲んでない）。なければ「実施した／実施しなかった」 */
   doneLabel: z.string().trim().max(MAX_NAME).optional(),
   notDoneLabel: z.string().trim().max(MAX_NAME).optional(),
+  /** 指定した困りごとの「すぐ下」に、〇／×の2択で出す項目（例: 困りごとの相手への対応を意識したか）。一覧には出さない */
+  underProblemId: z.string().min(1).max(64).optional(),
   /** true: 「筋肉痛」も選べる（選ぶと強さを5段階で記録） */
   sore: z.boolean().optional(),
   /** 「実施した」を選んだとき、下に出すメモ欄の呼び名（例: どんな筋トレをしたか） */

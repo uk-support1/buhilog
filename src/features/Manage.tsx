@@ -26,6 +26,10 @@ export function Manage({ repo }: { repo: Repo }) {
   const [pFactor, setPFactor] = useState(false);
   const [aName, setAName] = useState('');
   const [aLinks, setALinks] = useState<string[]>([]);
+  const [aUnder, setAUnder] = useState('');
+  const [aDone, setADone] = useState('');
+  const [aNotDone, setANotDone] = useState('');
+  const [aNote, setANote] = useState('');
   const [linkEditId, setLinkEditId] = useState<string | null>(null);
   const activeP = problems.filter((p) => !p.archivedAt);
   const archivedP = problems.filter((p) => p.archivedAt);
@@ -93,7 +97,7 @@ export function Manage({ repo }: { repo: Repo }) {
           {activeA.map((a) => (
             <li key={a.id} className="row wrap manage">
               <span className="grow">
-                {a.name}{groupLabel(a) && <small className="muted"> [{groupLabel(a)}]</small>}
+                {a.name}{groupLabel(a) && <small className="muted"> [{groupLabel(a)}]</small>}{a.underProblemId && <small className="muted"> ［{nameOf(a.underProblemId)}の下に表示］</small>}
                 <small className={a.linkedProblemIds.length ? 'muted' : 'warn-text'}>
                   {' '}{a.linkedProblemIds.length ? a.linkedProblemIds.map(nameOf).join('、') : '（対象の困りごとが未設定）'}
                 </small>
@@ -135,13 +139,24 @@ export function Manage({ repo }: { repo: Repo }) {
             </li>
           ))}
         </ul>
-        <form onSubmit={(e) => { e.preventDefault(); const n = aName.trim(); if (!n) return; void run(async () => { await repo.addApproach(n, aLinks); setAName(''); setALinks([]); }); }}>
+        <form onSubmit={(e) => { e.preventDefault(); const n = aName.trim(); if (!n) return; void run(async () => { await repo.addApproach(n, aLinks, undefined, undefined, undefined, { underProblemId: aUnder || undefined, doneLabel: aDone.trim() || undefined, notDoneLabel: aNotDone.trim() || undefined, noteLabel: aNote.trim() || undefined }); setAName(''); setALinks([]); setAUnder(''); setADone(''); setANotDone(''); setANote(''); }); }}>
           <div className="row">
             <input aria-label="新しいアプローチ" placeholder="例: ストレッチ" maxLength={MAX_NAME} value={aName} onChange={(e) => setAName(e.target.value)} />
             <button type="submit">追加</button>
           </div>
+          <label className="field">表示する場所（選ぶと、その困りごとの「すぐ下」に〇／×で出ます）
+            <select aria-label="この困りごとの下に出す" value={aUnder} onChange={(e) => setAUnder(e.target.value)}>
+              <option value="">ふつうの一覧に出す</option>
+              {activeP.map((p) => <option key={p.id} value={p.id}>{p.name}の下{groupLabel(p) ? `（${groupLabel(p)}）` : ''}</option>)}
+            </select>
+          </label>
+          <div className="two">
+            <label className="field">「実施した」側のボタン名（任意）<input aria-label="実施した側のボタン名" placeholder="例: 〇" maxLength={MAX_NAME} value={aDone} onChange={(e) => setADone(e.target.value)} /></label>
+            <label className="field">「しなかった」側のボタン名（任意）<input aria-label="しなかった側のボタン名" placeholder="例: ×" maxLength={MAX_NAME} value={aNotDone} onChange={(e) => setANotDone(e.target.value)} /></label>
+          </div>
+          <label className="field">「実施した」のときに出すメモ欄の名前（任意）<input aria-label="メモ欄の名前" placeholder="例: 何をやったか" maxLength={MAX_NAME} value={aNote} onChange={(e) => setANote(e.target.value)} /></label>
           <fieldset>
-            <legend>対象の困りごと（複数可）</legend>
+            <legend>対象の困りごと（複数可。上で場所を選ぶと、その困りごとは自動で対象になります）</legend>
             {activeP.map((p) => (
               <label key={p.id} className="check">
                 <input type="checkbox" checked={aLinks.includes(p.id)}
