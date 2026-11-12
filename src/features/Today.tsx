@@ -63,6 +63,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
   const [detail, setDetail] = useState(false);
   const [tab, setTab] = useState<string>('');
   const [msg, setMsg] = useState('');
+  const [savedTick, setSavedTick] = useState(0); // 保存のたびに、ぶひおの動きを最初から見せるため
   const [err, setErr] = useState('');
 
   useEffect(() => {
@@ -187,6 +188,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
       setExisting(true);
       setDirty(false);
       setMsg(`${formatJa(date)}の記録を保存しました。あとから直せます。`);
+      setSavedTick((t) => t + 1);
     } catch {
       setErr('保存できませんでした。入力内容を確認してください。');
     }
@@ -600,7 +602,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
       {err && <p role="alert" className="err">{err}</p>}
       {msg && (
         <div role="status" className="ok saved">
-          <Buhio size={64} pose="jumping" />
+          <Buhio key={savedTick} size={64} pose="jumping" animate />
           <span>{msg}</span>
         </div>
       )}

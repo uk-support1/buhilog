@@ -22,7 +22,7 @@ export function Welcome({ repo, onDone }: { repo: Repo; onDone: () => void }) {
   if (step === 0) {
     return (
       <main className="card welcome">
-        <Buhio size={150} pose="waving" />
+        <Buhio size={150} pose="waving" animate />
         <h1>ぶひろぐ</h1>
         <p>困りごとと、試したことを記録して、自分なりの傾向を見つけるためのアプリです。</p>
         <ul>
