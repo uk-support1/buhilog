@@ -175,3 +175,8 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; } .chip { padding:4px 10px; min-height:32px; font-size:.85rem; }
 .soreness { margin:6px 0; } .soreness .seg { margin-top:4px; }
 .caltop { margin-bottom:8px; justify-content:flex-end; } .caltop .addtop { width:auto; flex:0 0 auto; min-height:44px; padding:8px 18px; }
+/* 調子が低い朝の「上げる方法」 */
+.boost { background:#fff7e6; border:2px solid #f6d58a; border-radius:16px; padding:10px 12px; margin:8px 0; }
+.boostlist { display:flex; flex-direction:column; gap:8px; margin:8px 0; }
+.boostbtn { text-align:left; min-height:48px; font-size:1rem; } .boostbtn.sel { background:var(--accent); color:#fff; border-color:var(--accent); }
+.boostafter { margin-top:8px; }

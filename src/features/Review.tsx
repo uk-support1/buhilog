@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { buildSeries, compareApproach, PERIODS, type Period } from '../domain/analytics';
 import { toLocalDate } from '../domain/date';
+import { boostActionsOf, boostSummary, findBoostProblem } from '../domain/boost';
 import { buildGroups, hasNamedGroups } from '../domain/groups';
 import { rankFactors, STRENGTH_LABEL, type Candidate, type RatedFactorDef, type SignalDef } from '../domain/correlation';
 import { summarizeSign, signStory } from '../domain/signSummary';
@@ -21,12 +22,15 @@ export function Review({ repo }: { repo: Repo }) {
   const [loaded, setLoaded] = useState(false);
   const [groupOrder, setGroupOrder] = useState<string[]>([]);
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [boostActions, setBoostActions] = useState(boostActionsOf());
 
   useEffect(() => {
     void (async () => {
       const [ps, as, es] = await Promise.all([repo.listProblems(true), repo.listApproaches(true), repo.listEntries()]);
       setProblems(ps); setApproaches(as); setEntries(es);
-      setGroupOrder((await repo.getSettings()).groupOrder ?? []);
+      const st = await repo.getSettings();
+      setGroupOrder(st.groupOrder ?? []);
+      setBoostActions(boostActionsOf(st.boostActions));
       setPid((cur) => cur || ps.find((p) => !p.archivedAt)?.id || ps[0]?.id || '');
       setLoaded(true);
     })();
@@ -58,6 +62,8 @@ export function Review({ repo }: { repo: Repo }) {
     [problems, approaches, entries, problem, end, period],
   );
   useEffect(() => { setOpenKey(null); }, [pid, choice]);
+  const morning = findBoostProblem(problems);
+  const boostRows = useMemo(() => (morning ? boostSummary(entries, morning.id, boostActions) : []), [entries, morning, boostActions]);
   const optionGroups = useMemo(() => {
     const gs = buildGroups(problems, [], groupOrder).filter((g) => g.sections.some((s) => s.problems.length));
     return hasNamedGroups(gs) ? gs.map((g) => ({ label: g.name, items: g.sections.flatMap((s) => s.problems) })) : [{ label: '', items: problems }];
@@ -109,6 +115,24 @@ export function Review({ repo }: { repo: Repo }) {
             <summary>週ごとの平均（記録のある日のみ）</summary>
             <ul>{series.weeks.map((w) => <li key={w.from}>{w.from}〜{w.to}: {w.mean == null ? '記録なし' : `${w.mean.toFixed(1)}（${w.n}日分）`}</li>)}</ul>
           </details>
+        </section>
+      )}
+
+      {boostRows.length > 0 && (
+        <section className="card" aria-labelledby="boost-h">
+          <h2 id="boost-h">調子が低い朝の「上げる方法」</h2>
+          <p className="muted small">朝の調子が低い日に試したことと、そのあとの調子の変化（やったあとの調子 − 朝の調子）です。やったあとの調子を入れた日だけで平均しています。</p>
+          <ul className="plain">
+            {boostRows.map((b) => (
+              <li key={b.id} className="boostrow">
+                <strong>{b.name}</strong>：{b.used}回
+                {b.meanDelta == null
+                  ? <span className="muted">（やったあとの調子の記録がまだありません）</span>
+                  : <> ／ 平均 <strong>{b.meanDelta > 0 ? '+' : ''}{b.meanDelta.toFixed(1)}</strong>（{b.measured}回分）{b.measured < 5 && <span className="muted">　まだ少ないので参考程度</span>}</>}
+              </li>
+            ))}
+          </ul>
+          <p className="muted small">「何もしなかった」日の変化と比べると、やったことで上がったかどうかの手がかりになります。ただし、時間がたって自然に上がっただけの可能性もあるので、決めつけずに続けて見てください。</p>
         </section>
       )}
 

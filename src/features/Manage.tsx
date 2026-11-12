@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Repo } from '../db/repo';
-import { MAX_NAME, type Approach, type Problem } from '../domain/types';
+import { BOOST_NONE, boostActionsOf } from '../domain/boost';
+import { MAX_NAME, type Approach, type BoostAction, type Problem } from '../domain/types';
 
 export function Manage({ repo }: { repo: Repo }) {
   const [problems, setProblems] = useState<Problem[]>([]);
@@ -16,6 +17,10 @@ export function Manage({ repo }: { repo: Repo }) {
     try { await f(); await reload(); } catch (e) { setErr(e instanceof Error ? e.message : '操作に失敗しました'); }
   };
 
+  const [boost, setBoost] = useState<BoostAction[]>(boostActionsOf());
+  const [bName, setBName] = useState('');
+  useEffect(() => { void repo.getSettings().then((s) => setBoost(boostActionsOf(s.boostActions))); }, [repo]);
+  const saveBoost = (next: BoostAction[]) => run(async () => { await repo.saveSettings({ boostActions: next }); setBoost(boostActionsOf(next)); });
   const [pName, setPName] = useState('');
   const [pAfter, setPAfter] = useState('');
   const [pFactor, setPFactor] = useState(false);
@@ -153,6 +158,36 @@ export function Manage({ repo }: { repo: Repo }) {
               {archivedA.map((a) => (
                 <li key={a.id} className="row"><span className="grow">{a.name}</span>
                   <button onClick={() => run(() => repo.setApproachArchived(a.id, false))}>元に戻す</button></li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </section>
+
+      <section className="card" aria-label="調子を上げる方法の設定">
+        <h2>調子が低い朝の「上げる方法」</h2>
+        <p className="muted small">朝の調子が3以下のとき、「記録」の画面にその場で出す一覧です。「何もしなかった」は、比べるために、いつも最後に出ます。</p>
+        <ul className="plain">
+          {boost.filter((b) => b.id !== BOOST_NONE && !b.archivedAt).map((b) => (
+            <li key={b.id} className="row wrap manage">
+              <span className="grow">{b.name}</span>
+              <button onClick={() => { const n = rename(b.name); if (n) void saveBoost(boost.map((x) => (x.id === b.id ? { ...x, name: n } : x))); }}>名前変更</button>
+              <button onClick={() => saveBoost(boost.map((x) => (x.id === b.id ? { ...x, archivedAt: Date.now() } : x)))}>はずす</button>
+            </li>
+          ))}
+          <li className="row manage"><span className="grow muted">何もしなかった（固定）</span></li>
+        </ul>
+        <form className="row" onSubmit={(e) => { e.preventDefault(); const n = bName.trim(); if (!n) return; void saveBoost([...boost, { id: crypto.randomUUID(), name: n }]); setBName(''); }}>
+          <input aria-label="新しい上げる方法" placeholder="例: 外の空気を吸う" maxLength={MAX_NAME} value={bName} onChange={(e) => setBName(e.target.value)} />
+          <button type="submit">追加</button>
+        </form>
+        {boost.some((b) => b.archivedAt) && (
+          <details>
+            <summary>はずしたもの（過去の記録は残ります）</summary>
+            <ul className="plain">
+              {boost.filter((b) => b.archivedAt).map((b) => (
+                <li key={b.id} className="row"><span className="grow">{b.name}</span>
+                  <button onClick={() => saveBoost(boost.map((x) => (x.id === b.id ? { id: x.id, name: x.name } : x)))}>元に戻す</button></li>
               ))}
             </ul>
           </details>
