@@ -9,6 +9,7 @@ import type { Approach, ApproachStatus, Medication, Problem } from '../domain/ty
 import { Buhio } from '../ui/Buhio';
 import { PROBLEM_SCALE_LABEL } from '../domain/scale';
 import { ScoreInput } from '../ui/ScoreInput';
+import { BOOST_NONE, BOOST_PROBLEM_NAME, BOOST_THRESHOLD, boostActionsOf, toggleBoost } from '../domain/boost';
 import { TimeSelect } from '../ui/TimeSelect';
 import { TodayEvents } from './TodayEvents';
 
@@ -23,6 +24,8 @@ interface Form {
   awake: string[];
   /** 実施した項目の量（杯・回数）。approachId → 入力文字 */
   quantities: Record<string, string>;
+  /** 調子が低い朝にやった「上げる方法」と、そのあとの調子 */
+  boost: { actions: string[]; after: number | null };
   /** 筋肉痛の強さ（approachId → 1〜5） */
   soreness: Record<string, number>;
   /** 「実施した」項目のメモ（approachId → 文字） */
@@ -38,7 +41,7 @@ interface Form {
 // 就寝・起床は未入力から始める。23:00 / 7:00 は「初期値の表示」（選択画面の開始位置）で、触るまでは入力済みにしない
 const emptyForm = (): Form => ({
   ratings: {}, notes: {}, statuses: {}, sleep: '', bed: '', wake: '', nap: '',
-  awake: Array(5).fill(''), quantities: {}, soreness: {}, aNotes: {}, meds: {}, stress: null, noteEvents: '', noteInsights: '', noteOther: '',
+  awake: Array(5).fill(''), quantities: {}, soreness: {}, aNotes: {}, boost: { actions: [], after: null }, meds: {}, stress: null, noteEvents: '', noteInsights: '', noteOther: '',
 });
 
 const STATUS_LABEL: Record<ApproachStatus, string> = { done: '実施した', not_done: '実施しなかった', sore: '筋肉痛', unknown: '未回答' };
@@ -52,6 +55,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
   const [approaches, setApproaches] = useState<Approach[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [groupOrder, setGroupOrder] = useState<string[]>([]);
+  const [boostList, setBoostList] = useState(boostActionsOf());
   const [form, setForm] = useState<Form>(emptyForm());
   const [existing, setExisting] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -71,6 +75,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
       setApproaches(as);
       setMedications(ms);
       setGroupOrder(st.groupOrder ?? []);
+      setBoostList(boostActionsOf(st.boostActions));
       setExisting(!!e);
       setForm(
         e
@@ -84,6 +89,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
               nap: e.napHours != null ? String(e.napHours) : '',
               awake: Array.from({ length: 5 }, (_, i) => (e.awakenings?.[i] != null ? String(e.awakenings[i]) : '')),
               quantities: Object.fromEntries(Object.entries(e.approachQuantities ?? {}).map(([k, v]) => [k, String(v)])),
+              boost: { actions: [...(e.boost?.actions ?? [])], after: e.boost?.after ?? null },
               soreness: { ...(e.approachSoreness ?? {}) },
               aNotes: { ...(e.approachNotes ?? {}) },
               meds: Object.fromEntries(Object.entries(e.medIntake ?? {}).map(([k, v]) => [k, String(v)])),
@@ -165,6 +171,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
         problemNotes: Object.fromEntries(Object.entries(form.notes).filter(([, v]) => v.trim() !== '')),
         approachStatuses: form.statuses,
         approachQuantities: Object.keys(quantities).length ? quantities : undefined,
+        boost: form.boost.actions.length ? { actions: form.boost.actions, ...(form.boost.after != null ? { after: form.boost.after } : {}) } : undefined,
         approachSoreness: Object.keys(soreness).length ? soreness : undefined,
         approachNotes: Object.keys(aNotes).length ? aNotes : undefined,
         medIntake: Object.keys(medIntake).length ? medIntake : undefined,
@@ -187,6 +194,36 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
     }
   };
 
+  // 朝の調子が低い（3以下）ときに、その場で「上げる方法」を出す。やったことと、やったあとの調子を記録する
+  const boostCard = (p: Problem) => {
+    const r = form.ratings[p.id];
+    if (!((r != null && r <= BOOST_THRESHOLD) || form.boost.actions.length > 0)) return null;
+    const visible = boostList.filter((a) => !a.archivedAt || form.boost.actions.includes(a.id));
+    return (
+      <div className="boost" role="group" aria-label="調子を上げる方法">
+        <p><strong>朝の調子が低めです。</strong>少しだけ、上げる方法を試してみませんか？</p>
+        <p className="muted small">やったものをタップしてください（いくつでも）。</p>
+        <div className="boostlist">
+          {visible.map((a) => {
+            const on = form.boost.actions.includes(a.id);
+            return (
+              <button key={a.id} type="button" role="checkbox" aria-checked={on} className={`boostbtn ${on ? 'sel' : ''}`}
+                onClick={() => edit((f) => ({ ...f, boost: { ...f.boost, actions: toggleBoost(f.boost.actions, a.id) } }))}>
+                {on ? '✓ ' : ''}{a.name}
+              </button>
+            );
+          })}
+        </div>
+        {form.boost.actions.length > 0 && (
+          <div className="boostafter">
+            <p className="small">{form.boost.actions.includes(BOOST_NONE) && form.boost.actions.length === 1 ? '何もしなかったあとの、いまの調子は？' : 'やったあとの、いまの調子は？'}（あとから入れてもOKです）</p>
+            <ScoreInput label="やったあとの調子" value={form.boost.after} onChange={(v) => edit((f) => ({ ...f, boost: { ...f.boost, after: v } }))} />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // 描画のたびに別コンポーネントにならないよう、関数として呼び出す（入力中のフォーカスを保つため）
   const problemBlock = (p: Problem, H: 'h2' | 'h3') => (
     <div className="item" aria-label={p.name} key={p.id}>
@@ -198,6 +235,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
         reverse={p.reverse}
         onChange={(v) => edit((f) => ({ ...f, ratings: { ...f.ratings, [p.id]: v } }))}
       />
+      {p.name === BOOST_PROBLEM_NAME && boostCard(p)}
       {approachOf(p.pairedApproachId) && practiceRow(approachOf(p.pairedApproachId)!)}
       {rescueChips(p)}
       {p.noteAlways ? (

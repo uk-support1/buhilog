@@ -72,6 +72,8 @@ export const DailyEntrySchema = z.object({
   medIntake: z.record(z.string(), z.number().min(0).max(1000)).optional(),
   /** 実施した項目の量（杯・回数など）。approachId → 数 */
   approachQuantities: z.record(z.string(), z.number().int().min(1).max(9999)).optional(),
+  /** 調子が低い朝にやった「上げる方法」（BoostAction の id）と、やったあとの調子（1〜5） */
+  boost: z.object({ actions: z.array(z.string().max(64)).max(30), after: problemRating.optional() }).optional(),
   /** 筋肉痛の強さ（1＝ほんのり 〜 5＝かなり強い）。状態が「筋肉痛」の項目だけ */
   approachSoreness: z.record(z.string(), z.number().int().min(1).max(5)).optional(),
   /** 「実施した」項目のメモ（どんな筋トレをしたか、など） */
@@ -153,6 +155,10 @@ export const EventSchema = z
 export type CalendarEvent = z.infer<typeof EventSchema>;
 export type Repeat = z.infer<typeof RepeatSchema>;
 
+/** 調子が低い朝に出す「上げる方法」（シャワー、好きな動画など）。archivedAt があれば、選択肢には出さない（過去の記録は残る） */
+export const BoostActionSchema = z.object({ id: z.string().min(1).max(64), name: z.string().trim().min(1).max(MAX_NAME), archivedAt: ts.optional() });
+export type BoostAction = z.infer<typeof BoostActionSchema>;
+
 export const AppSettingsSchema = z.object({
   schemaVersion: z.number().int(),
   onboardingCompleted: z.boolean(),
@@ -162,6 +168,8 @@ export const AppSettingsSchema = z.object({
   backupReminderDays: z.number().int().min(1).max(365),
   /** 画面のグループ（タブ）の並び順 */
   groupOrder: z.array(z.string().max(MAX_NAME)).optional(),
+  /** 「上げる方法」の一覧（なければ初期の一覧を使う） */
+  boostActions: z.array(BoostActionSchema).max(30).optional(),
   characterId: z.string().optional(),
   characterName: z.string().max(MAX_NAME).optional(),
 });

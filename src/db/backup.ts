@@ -3,6 +3,7 @@ import type { Repo } from './repo';
 import type { BuhiLogDB } from './db';
 import { convertLegacyRatings } from '../domain/scale';
 import { convertDayFactors, ensureMorningMotivation } from '../domain/dayFactors';
+import { boostActionsOf } from '../domain/boost';
 import { applyV9 } from '../domain/v9';
 import { ensureMedications } from '../domain/medications';
 import { ensureVitalitySigns } from '../domain/signs';
@@ -174,6 +175,10 @@ export function buildCsv(b: Backup): string {
       const sore = e.approachSoreness?.[id];
       const note = e.approachNotes?.[id];
       rows.push([e.localDate, 'アプローチ', aname.get(id) ?? id, s === 'sore' && sore != null ? `筋肉痛(${sore}/5)` : STATUS_JA[s], [q != null ? `${q}${unit}` : '', note ?? ''].filter(Boolean).join(' / ')]);
+    }
+    if (e.boost?.actions.length) {
+      const names = e.boost.actions.map((id) => boostActionsOf(b.settings.boostActions).find((a) => a.id === id)?.name ?? id).join('、');
+      rows.push([e.localDate, '調子を上げる方法', names, e.boost.after ?? '', e.boost.after != null ? 'やったあとの調子(1-5)' : '']);
     }
     if (e.sleepHours != null) rows.push([e.localDate, '生活', '睡眠時間(時間)', e.sleepHours, '']);
     if (e.bedtime) rows.push([e.localDate, '睡眠', '就寝時刻', e.bedtime, '']);
