@@ -187,3 +187,13 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 .boostbtn { text-align:left; min-height:48px; font-size:1rem; } .boostbtn.sel { background:var(--accent); color:#fff; border-color:var(--accent); }
 .boostafter { margin-top:8px; }
 .underrow { margin:8px 0; } .underrow .plabel { font-weight:700; display:block; margin-bottom:4px; }
+/* ToDo */
+.todolist { margin:6px 0 0; } .todorow { display:flex; align-items:center; gap:6px; border-top:1px solid var(--line); padding:2px 0; }
+.todocheck { flex:1; min-width:0; display:flex; align-items:center; gap:10px; text-align:left; border:0; background:transparent; min-height:48px; padding:4px 2px; box-shadow:none; }
+.todocheck .box { flex:0 0 24px; width:24px; height:24px; border:2px solid var(--accent); border-radius:7px; background:#fff; }
+.todocheck .txt { flex:1; word-break:break-word; font-size:1.02rem; }
+.todorow .mini { min-height:36px; padding:4px 8px; font-size:.8rem; width:auto; flex:0 0 auto; }
+.undobar { position:fixed; left:12px; right:12px; bottom:calc(76px + env(safe-area-inset-bottom)); z-index:40; background:#3b2a31; color:#fff; border-radius:14px; padding:10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+.undobar span { flex:1; min-width:0; word-break:break-all; } .undobar button { flex:0 0 auto; width:auto; min-height:40px; }
+.tabs button { position:relative; } .tabbadge { position:absolute; top:6px; margin-left:3px; min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--accent); color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
+.undobar button { background:#fff; color:var(--accent); font-weight:800; border:0; padding:6px 14px; }

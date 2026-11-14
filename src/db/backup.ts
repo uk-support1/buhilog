@@ -8,8 +8,8 @@ import { applyV9 } from '../domain/v9';
 import { ensureMedications } from '../domain/medications';
 import { ensureVitalitySigns } from '../domain/signs';
 import {
-  AppSettingsSchema, ApproachSchema, DailyEntrySchema, EventSchema, MedicationSchema, ProblemSchema, SCHEMA_VERSION,
-  type AppSettings, type Approach, type CalendarEvent, type DailyEntry, type Medication, type Problem,
+  AppSettingsSchema, ApproachSchema, DailyEntrySchema, EventSchema, MedicationSchema, ProblemSchema, SCHEMA_VERSION, TodoSchema,
+  type AppSettings, type Approach, type CalendarEvent, type DailyEntry, type Medication, type Problem, type Todo,
 } from '../domain/types';
 
 export const FORMAT_VERSION = 2;
@@ -23,6 +23,7 @@ const BackupSchema = z.object({
   dailyEntries: z.array(DailyEntrySchema),
   medications: z.array(MedicationSchema).default([]),
   events: z.array(EventSchema).default([]),
+  todos: z.array(TodoSchema).default([]),
   settings: AppSettingsSchema,
 });
 export type Backup = z.infer<typeof BackupSchema>;
@@ -36,6 +37,7 @@ export async function buildBackup(repo: Repo): Promise<Backup> {
     dailyEntries: await repo.listEntries(),
     medications: await repo.listMedications(true),
     events: await repo.listEvents(),
+    todos: await repo.listTodos(),
     settings: await repo.getSettings(),
   };
 }
@@ -123,6 +125,7 @@ export function parseBackup(text: string): ParseResult {
   const mids = new Set(b.medications.map((m) => m.id));
   if (dup(b.medications.map((m) => m.id))) errors.push('服薬の項目のIDが重複しています。');
   if (dup(b.events.map((e) => e.id))) errors.push('予定のIDが重複しています。');
+  if (dup(b.todos.map((t) => t.id))) errors.push('ToDoのIDが重複しています。');
   if (b.medications.some((m) => m.linkedProblemId && !pids.has(m.linkedProblemId))) errors.push('存在しない困りごとを参照する服薬の項目があります。');
   if (b.approaches.some((a) => a.linkedProblemIds.some((id) => !pids.has(id)))) errors.push('存在しない困りごとを参照するアプローチがあります。');
   for (const e of b.dailyEntries) {
@@ -139,10 +142,11 @@ export function parseBackup(text: string): ParseResult {
 
 /** 全置換。単一トランザクションなので、途中で失敗すれば元のデータは変更されない。 */
 export async function restoreBackup(db: BuhiLogDB, b: Backup): Promise<void> {
-  await db.transaction('rw', [db.problems, db.approaches, db.dailyEntries, db.settings, db.medications, db.events], async () => {
-    await Promise.all([db.problems.clear(), db.approaches.clear(), db.dailyEntries.clear(), db.settings.clear(), db.medications.clear(), db.events.clear()]);
+  await db.transaction('rw', [db.problems, db.approaches, db.dailyEntries, db.settings, db.medications, db.events, db.todos], async () => {
+    await Promise.all([db.problems.clear(), db.approaches.clear(), db.dailyEntries.clear(), db.settings.clear(), db.medications.clear(), db.events.clear(), db.todos.clear()]);
     await db.medications.bulkAdd(b.medications as Medication[]);
     await db.events.bulkAdd(b.events as CalendarEvent[]);
+    await db.todos.bulkAdd(b.todos as Todo[]);
     await db.problems.bulkAdd(b.problems as Problem[]);
     await db.approaches.bulkAdd(b.approaches as Approach[]);
     await db.dailyEntries.bulkAdd(b.dailyEntries as DailyEntry[]);
