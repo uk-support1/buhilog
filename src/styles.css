@@ -197,3 +197,4 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 .undobar span { flex:1; min-width:0; word-break:break-all; } .undobar button { flex:0 0 auto; width:auto; min-height:40px; }
 .tabs button { position:relative; } .tabbadge { position:absolute; top:6px; margin-left:3px; min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--accent); color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
 .undobar button { background:#fff; color:var(--accent); font-weight:800; border:0; padding:6px 14px; }
+.tocal .field, .tocal .check { display:block; margin:8px 0; } .tocal input[type=date] { width:100%; }
