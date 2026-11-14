@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Repo } from '../db/repo';
 import { formatJa, isValidLocalDate, toLocalDate } from '../domain/date';
-import { MAX_NAME, TODO_LISTS, type Todo } from '../domain/types';
+import { BOOST_NONE, boostActionsOf } from '../domain/boost';
+import { MAX_NAME, TODO_LISTS, type BoostAction, type Todo } from '../domain/types';
 import { WheelTime } from '../ui/WheelTime';
 
 const LISTS: { id: Todo['list']; title: string; hint: string; placeholder: string }[] = [
@@ -20,6 +21,11 @@ export function TodoPage({ repo, onCount }: { repo: Repo; onCount?: (n: number) 
   // 「カレンダーへ」移すときの入力（日付・時刻）
   const [toCal, setToCal] = useState<{ todo: Todo; title: string; date: string; allDay: boolean; start: string; end: string } | null>(null);
   const [err, setErr] = useState('');
+  // 「やる気がない時の対処法」: 朝の「上げる方法」と同じ一覧。タップで印がつくだけで、消えない（印は、ページを閉じると消える）
+  const [boost, setBoost] = useState<BoostAction[]>(boostActionsOf());
+  const [marks, setMarks] = useState<Set<string>>(new Set());
+  const [bName, setBName] = useState('');
+  useEffect(() => { void repo.getSettings().then((s) => setBoost(boostActionsOf(s.boostActions))); }, [repo]);
   const timer = useRef<number | undefined>(undefined);
 
   const reload = useCallback(async () => {
@@ -117,6 +123,31 @@ export function TodoPage({ repo, onCount }: { repo: Repo; onCount?: (n: number) 
           </section>
         );
       })}
+      <section className="card todo" aria-label="やる気がない時の対処法">
+        <h2>やる気がない時の対処法</h2>
+        <p className="muted small">朝の「上げる方法」と同じ一覧です。タップすると印がつきます（消えません）。</p>
+        <div className="boostlist">
+          {boost.filter((b) => b.id !== BOOST_NONE && !b.archivedAt).map((b) => {
+            const on = marks.has(b.id);
+            return (
+              <button key={b.id} type="button" role="checkbox" aria-checked={on} className={`boostbtn ${on ? 'sel' : ''}`}
+                onClick={() => setMarks((m) => { const n = new Set(m); if (n.has(b.id)) n.delete(b.id); else n.add(b.id); return n; })}>
+                {on ? '✓ ' : ''}{b.name}
+              </button>
+            );
+          })}
+        </div>
+        <form className="row" onSubmit={(e) => {
+          e.preventDefault();
+          const n = bName.trim();
+          if (!n) return;
+          void run(async () => { const next = [...boost, { id: crypto.randomUUID(), name: n }]; await repo.saveSettings({ boostActions: next }); setBoost(boostActionsOf(next)); setBName(''); });
+        }}>
+          <input aria-label="対処法に追加" placeholder="例: 外の空気を吸う" maxLength={MAX_NAME} value={bName} onChange={(e) => setBName(e.target.value)} />
+          <button type="submit">追加</button>
+        </form>
+        <p className="muted small">ここで足したものは、朝の「上げる方法」にも出ます。</p>
+      </section>
       {toCal && (
         <div className="sheetbg" onClick={() => setToCal(null)}>
           <div className="sheet tocal" role="dialog" aria-label="カレンダーに移す" onClick={(e) => e.stopPropagation()}>
