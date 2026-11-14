@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { BuhiLogDB } from '../src/db/db';
@@ -70,5 +70,56 @@ describe('ToDo画面', () => {
     vi.spyOn(window, 'prompt').mockReturnValue('ティッシュ 3箱');
     await user.click(within(shop).getByRole('button', { name: 'ティッシュを書き直す' }));
     expect(await within(shop).findByText('ティッシュ 3箱')).toBeInTheDocument();
+  });
+});
+
+describe('ToDoからカレンダーへ移す', () => {
+  async function open(name: string) {
+    const user = userEvent.setup();
+    const repo = createRepo(new BuhiLogDB(name));
+    await repo.addTodo('someday', '歯医者の予約をする');
+    render(<TodoPage repo={repo} />);
+    const someday = await screen.findByRole('region', { name: 'いつか' });
+    await user.selectOptions(await within(someday).findByLabelText('歯医者の予約をするを移す'), 'calendar');
+    return { user, repo };
+  }
+  it('日付を入れて予定にでき、ToDoからは消える。名前も直せる', async () => {
+    const { user, repo } = await open('todo-cal1');
+    const dlg = screen.getByRole('dialog', { name: 'カレンダーに移す' });
+    expect((within(dlg).getByLabelText('予定の名前') as HTMLInputElement).value).toBe('歯医者の予約をする'); // ToDoの文が最初から入る
+    await user.clear(within(dlg).getByLabelText('予定の名前'));
+    await user.type(within(dlg).getByLabelText('予定の名前'), '歯医者');
+    fireEvent.change(within(dlg).getByLabelText('予定の日付'), { target: { value: '2026-12-02' } });
+    await user.click(within(dlg).getByRole('button', { name: '予定にする' }));
+    await waitFor(async () => expect((await repo.listTodos())).toHaveLength(0));
+    const evs = await repo.listEvents();
+    expect(evs).toHaveLength(1);
+    expect(evs[0]).toMatchObject({ title: '歯医者', date: '2026-12-02', allDay: true });
+    expect(await screen.findByText(/予定に移しました（12月2日（水））/)).toBeInTheDocument();
+  });
+  it('時刻つきにもでき、「元に戻す」で予定を消してToDoに戻る', async () => {
+    const { user, repo } = await open('todo-cal2');
+    const dlg = screen.getByRole('dialog', { name: 'カレンダーに移す' });
+    fireEvent.change(within(dlg).getByLabelText('予定の日付'), { target: { value: '2026-12-02' } });
+    await user.click(within(dlg).getByRole('checkbox', { name: /終日/ }));
+    await user.click(within(dlg).getByRole('button', { name: '開始時刻' }));
+    await user.click(within(screen.getByRole('listbox', { name: '開始時刻の時' })).getByRole('option', { name: '14時' }));
+    await user.click(screen.getByRole('button', { name: '決定' }));
+    await user.click(within(dlg).getByRole('button', { name: '予定にする' }));
+    await waitFor(async () => expect((await repo.listEvents())[0]).toMatchObject({ allDay: false, startTime: '14:00', date: '2026-12-02' }));
+    await user.click(await screen.findByRole('button', { name: '元に戻す' }));
+    await waitFor(async () => {
+      expect(await repo.listEvents()).toHaveLength(0);
+      expect((await repo.listTodos()).map((t) => t.text)).toEqual(['歯医者の予約をする']);
+    });
+  });
+  it('日付が空だと予定にならず、ToDoも消えない', async () => {
+    const { user, repo } = await open('todo-cal3');
+    const dlg = screen.getByRole('dialog', { name: 'カレンダーに移す' });
+    fireEvent.change(within(dlg).getByLabelText('予定の日付'), { target: { value: '' } });
+    await user.click(within(dlg).getByRole('button', { name: '予定にする' }));
+    expect(await within(dlg).findByRole('alert')).toHaveTextContent('日付');
+    expect(await repo.listEvents()).toHaveLength(0);
+    expect(await repo.listTodos()).toHaveLength(1);
   });
 });
