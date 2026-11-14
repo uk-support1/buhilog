@@ -1,7 +1,7 @@
 import { db, type BuhiLogDB } from './db';
 import {
-  AppSettingsSchema, EventSchema, ApproachSchema, DailyEntrySchema, DEFAULT_SETTINGS, ProblemSchema,
-  type AppSettings, type Approach, type CalendarEvent, type DailyEntry, type Medication, type Problem,
+  AppSettingsSchema, EventSchema, TodoSchema, ApproachSchema, DailyEntrySchema, DEFAULT_SETTINGS, ProblemSchema,
+  type AppSettings, type Approach, type CalendarEvent, type DailyEntry, type Medication, type Problem, type Todo,
 } from '../domain/types';
 
 const newId = () => crypto.randomUUID();
@@ -162,6 +162,36 @@ export function createRepo(d: BuhiLogDB = db) {
       });
     },
 
+    // ---- ToDo（買い物・やること・いつか）。チェックしたら消す ----
+    async listTodos(): Promise<Todo[]> {
+      return (await d.todos.toArray()).sort((a, b) => a.order - b.order);
+    },
+    /** そのリストの一番下に追加 */
+    async addTodo(list: Todo['list'], text: string): Promise<Todo> {
+      return d.transaction('rw', d.todos, async () => {
+        const all = await d.todos.toArray();
+        const now = Date.now();
+        const t = TodoSchema.parse({ id: newId(), list, text, order: all.reduce((m, x) => Math.max(m, x.order), -1) + 1, createdAt: now, updatedAt: now });
+        await d.todos.add(t);
+        return t;
+      });
+    },
+    /** 書き直し、または別のリストへ移す（移すと、移した先の一番下に入る） */
+    async updateTodo(id: string, patch: { text?: string; list?: Todo['list'] }): Promise<Todo> {
+      return d.transaction('rw', d.todos, async () => {
+        const cur = await d.todos.get(id);
+        if (!cur) throw new Error('見つかりません');
+        const moved = patch.list && patch.list !== cur.list;
+        const order = moved ? (await d.todos.toArray()).reduce((m, x) => Math.max(m, x.order), -1) + 1 : cur.order;
+        const t = TodoSchema.parse({ ...cur, ...patch, order, updatedAt: Date.now() });
+        await d.todos.put(t);
+        return t;
+      });
+    },
+    async deleteTodo(id: string) { await d.todos.delete(id); },
+    /** 消したものを、元の場所に戻す（「元に戻す」用） */
+    async restoreTodo(t: Todo) { await d.todos.put(TodoSchema.parse(t)); },
+
     // ---- 設定 ----
     async getSettings(): Promise<AppSettings> {
       const row = await d.settings.get('app');
@@ -180,8 +210,8 @@ export function createRepo(d: BuhiLogDB = db) {
 
     /** 全件削除（設定画面から二重確認のうえ呼ぶ） */
     async wipeAll() {
-      await d.transaction('rw', [d.problems, d.approaches, d.dailyEntries, d.settings, d.medications, d.events], async () => {
-        await Promise.all([d.problems.clear(), d.approaches.clear(), d.dailyEntries.clear(), d.settings.clear(), d.medications.clear(), d.events.clear()]);
+      await d.transaction('rw', [d.problems, d.approaches, d.dailyEntries, d.settings, d.medications, d.events, d.todos], async () => {
+        await Promise.all([d.problems.clear(), d.approaches.clear(), d.dailyEntries.clear(), d.settings.clear(), d.medications.clear(), d.events.clear(), d.todos.clear()]);
       });
     },
   };

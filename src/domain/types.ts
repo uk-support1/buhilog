@@ -161,6 +161,18 @@ export type Repeat = z.infer<typeof RepeatSchema>;
 export const BoostActionSchema = z.object({ id: z.string().min(1).max(64), name: z.string().trim().min(1).max(MAX_NAME), archivedAt: ts.optional() });
 export type BoostAction = z.infer<typeof BoostActionSchema>;
 
+/** ToDo（買い物・やること・いつか）。日付とは関係なく、ずっと続くリスト。チェックしたら消す */
+export const TODO_LISTS = ['shop', 'todo', 'someday'] as const;
+export const TodoSchema = z.object({
+  id,
+  list: z.enum(TODO_LISTS),
+  text: z.string().trim().min(1).max(200),
+  order: z.number().int(),
+  createdAt: ts,
+  updatedAt: ts,
+});
+export type Todo = z.infer<typeof TodoSchema>;
+
 export const AppSettingsSchema = z.object({
   schemaVersion: z.number().int(),
   onboardingCompleted: z.boolean(),
@@ -177,7 +189,7 @@ export const AppSettingsSchema = z.object({
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: SCHEMA_VERSION,
   onboardingCompleted: false,

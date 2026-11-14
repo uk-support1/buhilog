@@ -4,7 +4,7 @@ import { convertDayFactors, ensureMorningMotivation } from '../domain/dayFactors
 import { ensureVitalitySigns } from '../domain/signs';
 import { applyV9 } from '../domain/v9';
 import { ensureMedications } from '../domain/medications';
-import type { AppSettings, Approach, CalendarEvent, DailyEntry, Medication, Problem } from '../domain/types';
+import type { AppSettings, Approach, CalendarEvent, DailyEntry, Medication, Problem, Todo } from '../domain/types';
 
 type SettingsRow = AppSettings & { key: 'app' };
 
@@ -15,6 +15,7 @@ export class BuhiLogDB extends Dexie {
   settings!: Table<SettingsRow, string>;
   medications!: Table<Medication, string>;
   events!: Table<CalendarEvent, string>;
+  todos!: Table<Todo, string>;
 
   constructor(name = 'buhilog') {
     super(name);
@@ -168,6 +169,20 @@ export class BuhiLogDB extends Dexie {
           s.schemaVersion = 9;
           if (r.groupOrder) s.groupOrder = r.groupOrder;
         });
+      });
+    // v10: ToDo（買い物・やること・いつか）。新しい表を足すだけで、既存の記録には触れない。
+    this.version(10)
+      .stores({
+        problems: 'id, order, archivedAt',
+        approaches: 'id, archivedAt',
+        dailyEntries: 'id, &localDate',
+        settings: 'key',
+        medications: 'id, order, archivedAt',
+        events: 'id, date',
+        todos: 'id, list, order',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 10; });
       });
   }
 }
