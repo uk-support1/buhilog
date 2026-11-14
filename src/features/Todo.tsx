@@ -108,7 +108,7 @@ export function TodoPage({ repo, onCount }: { repo: Repo; onCount?: (n: number) 
                     }}>
                       <option value="">移す</option>
                       {LISTS.filter((x) => x.id !== t.list).map((x) => <option key={x.id} value={x.id}>{x.title}へ</option>)}
-                      <option value="calendar">カレンダーへ（日付を入れる）</option>
+                      <option value="calendar">📅へ</option>
                     </select>
                   </li>
                 ))}
