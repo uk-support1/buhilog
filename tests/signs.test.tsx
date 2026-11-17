@@ -74,7 +74,7 @@ describe('旧データの引き継ぎ（DB v3 → v4 / バックアップ）', (
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.backup.problems.filter((p) => p.group === SIGN_GROUP).map((p) => p.name).sort()).toEqual(['口角', '背筋の伸び']);
-    expect(r.backup.approaches).toHaveLength(2);
+    expect(r.backup.approaches.filter((a) => !a.underProblemId)).toHaveLength(2); // 意識した項目の2つ（出社前のやる気の下の項目は別）
     expect(r.backup.settings.groupOrder).toEqual([SIGN_GROUP, '困りごと']);
   });
 });

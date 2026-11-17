@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { legacyRatingToNew } from '../domain/scale';
-import { convertDayFactors, ensureMorningMotivation } from '../domain/dayFactors';
+import { convertDayFactors, ensureMorningMotivation, ensureMotivationActions } from '../domain/dayFactors';
 import { ensureVitalitySigns } from '../domain/signs';
 import { applyV9 } from '../domain/v9';
 import { ensureMedications } from '../domain/medications';
@@ -183,6 +183,22 @@ export class BuhiLogDB extends Dexie {
       })
       .upgrade(async (tx) => {
         await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 10; });
+      });
+    // v11: 「出社前の活動（やる気）」のすぐ下に、やる気を上げる方法（実施した／実施しなかった）を足す。ほかの記録には触れない。
+    this.version(11)
+      .stores({
+        problems: 'id, order, archivedAt',
+        approaches: 'id, archivedAt',
+        dailyEntries: 'id, &localDate',
+        settings: 'key',
+        medications: 'id, order, archivedAt',
+        events: 'id, date',
+        todos: 'id, list, order',
+      })
+      .upgrade(async (tx) => {
+        const r = ensureMotivationActions(await tx.table('problems').toArray(), await tx.table('approaches').toArray(), () => crypto.randomUUID(), Date.now());
+        if (r.changed) await tx.table('approaches').bulkPut(r.approaches);
+        await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 11; });
       });
   }
 }

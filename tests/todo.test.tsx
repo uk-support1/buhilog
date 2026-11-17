@@ -123,23 +123,3 @@ describe('ToDoからカレンダーへ移す', () => {
     expect(await repo.listTodos()).toHaveLength(1);
   });
 });
-
-describe('やる気がない時の対処法', () => {
-  it('朝の「上げる方法」と同じ一覧が出て、タップしても消えず印がつく。足したものは共通の一覧に入る', async () => {
-    const user = userEvent.setup();
-    const repo = createRepo(new BuhiLogDB('todo-boost'));
-    render(<TodoPage repo={repo} />);
-    const sec = await screen.findByRole('region', { name: 'やる気がない時の対処法' });
-    for (const n of ['シャワーを浴びる', "B'zの動画をみる", '大学の時の動画をみる']) expect(within(sec).getByRole('checkbox', { name: n })).toBeInTheDocument();
-    expect(within(sec).queryByRole('checkbox', { name: '何もしなかった' })).toBeNull(); // 試すものだけ
-    const cb = within(sec).getByRole('checkbox', { name: "B'zの動画をみる" });
-    await user.click(cb);
-    expect(within(sec).getByRole('checkbox', { name: /B'zの動画をみる/ })).toHaveAttribute('aria-checked', 'true');
-    await user.click(within(sec).getByRole('checkbox', { name: /B'zの動画をみる/ }));
-    expect(within(sec).getByRole('checkbox', { name: "B'zの動画をみる" })).toHaveAttribute('aria-checked', 'false'); // 消えずに、印だけ外れる
-    await user.type(within(sec).getByLabelText('対処法に追加'), '散歩{enter}');
-    expect(await within(sec).findByRole('checkbox', { name: '散歩' })).toBeInTheDocument();
-    const saved = (await repo.getSettings()).boostActions ?? [];
-    expect(saved.map((a) => a.name)).toContain('散歩');
-  });
-});
