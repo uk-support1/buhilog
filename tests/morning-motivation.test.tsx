@@ -51,3 +51,41 @@ describe('困りごとを、選んだ項目の下に追加', () => {
     await waitFor(async () => expect((await repo.listProblems()).map((p) => p.name)).toEqual(['A', 'Aの足', 'B']));
   });
 });
+
+import { ensureMotivationActions, MOTIVATION_ACTIONS } from '../src/domain/dayFactors';
+import { Today } from '../src/features/Today';
+
+describe('出社前の活動（やる気）の下の「実施したか」', () => {
+  it('3つの項目を、やる気の項目のすぐ下に足す。何度実行しても同じ。やる気の項目がなければ何もしない', () => {
+    const p = ensureMorningMotivation([], () => 'pid', 1).problems;
+    const a = ensureMotivationActions(p, [], (() => { let n = 0; return () => `a${++n}`; })(), 5);
+    expect(a.approaches.map((x) => x.name)).toEqual([...MOTIVATION_ACTIONS]);
+    expect(a.approaches.every((x) => x.underProblemId === 'pid' && x.linkedProblemIds[0] === 'pid' && x.group === '朝要因')).toBe(true);
+    expect(ensureMotivationActions(p, a.approaches, () => 'z', 6).changed).toBe(false);
+    expect(ensureMotivationActions([], [], () => 'z', 6).changed).toBe(false);
+  });
+  it('旧いDBを開くと項目が足される', async () => {
+    const legacy = new Dexie('legacy-v10');
+    const stores = { problems: 'id, order, archivedAt', approaches: 'id, archivedAt', dailyEntries: 'id, &localDate', settings: 'key', medications: 'id, order, archivedAt', events: 'id, date', todos: 'id, list, order' };
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach((v) => legacy.version(v).stores(stores));
+    await legacy.table('problems').add({ id: 'pm', name: '出社前の活動（やる気）', order: 0, group: '朝要因', asFactor: true, createdAt: 0, updatedAt: 0 });
+    await legacy.table('settings').add({ key: 'app', schemaVersion: 10, onboardingCompleted: true, backupReminderDays: 14 });
+    legacy.close();
+    const repo = createRepo(new BuhiLogDB('legacy-v10'));
+    const as = await repo.listApproaches();
+    expect(as.map((x) => x.name)).toEqual([...MOTIVATION_ACTIONS]);
+    expect(as.every((x) => x.underProblemId === 'pm')).toBe(true);
+  });
+  it('今日の画面では、やる気の項目のすぐ下に〇ではなく「実施した／実施しなかった」で出る', async () => {
+    const user = userEvent.setup();
+    const repo = createRepo(new BuhiLogDB('motivation-ui'));
+    const p = await repo.addProblem('出社前の活動（やる気）', undefined, '朝要因');
+    await repo.addApproach("B'zの動画をみる", [], undefined, undefined, undefined, { underProblemId: p.id, doneLabel: '実施した', notDoneLabel: '実施しなかった' });
+    render(<Today repo={repo} initialDate="2026-11-17" />);
+    await user.click(await screen.findByRole('tab', { name: /朝要因/ }));
+    const g = await screen.findByRole('radiogroup', { name: "B'zの動画をみる" });
+    await user.click(within(g).getByRole('radio', { name: '実施した' }));
+    await user.click(screen.getByRole('button', { name: /保存/ }));
+    await waitFor(async () => expect(Object.values((await repo.getEntry('2026-11-17'))?.approachStatuses ?? {})).toEqual(['done']));
+  });
+});

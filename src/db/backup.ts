@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { Repo } from './repo';
 import type { BuhiLogDB } from './db';
 import { convertLegacyRatings } from '../domain/scale';
-import { convertDayFactors, ensureMorningMotivation } from '../domain/dayFactors';
+import { convertDayFactors, ensureMorningMotivation, ensureMotivationActions } from '../domain/dayFactors';
 import { boostActionsOf } from '../domain/boost';
 import { applyV9 } from '../domain/v9';
 import { ensureMedications } from '../domain/medications';
@@ -87,6 +87,11 @@ function normalizeOlder(json: unknown): void {
     h.approaches = r.approaches;
     h.dailyEntries = r.entries;
     if (r.groupOrder) h.settings.groupOrder = r.groupOrder;
+  }
+  // v11: 「出社前の活動（やる気）」の下の、やる気を上げる方法
+  if (j.settings && (j.settings.schemaVersion ?? 0) < 11 && Array.isArray(j.problems)) {
+    const h = j as { problems: Problem[]; approaches?: Approach[] };
+    h.approaches = ensureMotivationActions(h.problems, h.approaches ?? [], () => crypto.randomUUID(), Date.now()).approaches;
   }
   if (j.settings) j.settings.schemaVersion = SCHEMA_VERSION;
 }

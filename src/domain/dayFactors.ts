@@ -73,6 +73,19 @@ export function convertDayFactors(
   return { problems: ps, approaches: as, entries: es, changed };
 }
 
+/** 「出社前の活動（やる気）」のすぐ下に出す、やる気を上げる方法（実施した／実施しなかった）。朝の「上げる方法」の初期の一覧と同じ内容 */
+export const MOTIVATION_ACTIONS = ["B'zの動画をみる", '大学の時の動画をみる', 'シャワーを浴びる'] as const;
+export function ensureMotivationActions(problems: Problem[], approaches: Approach[], newId: () => string, now: number): { approaches: Approach[]; changed: boolean } {
+  const p = problems.find((x) => x.name === MORNING_MOTIVATION.name);
+  if (!p) return { approaches, changed: false };
+  const add: Approach[] = [];
+  for (const [i, name] of MOTIVATION_ACTIONS.entries()) {
+    if (approaches.some((a) => a.underProblemId === p.id && a.name === name)) continue;
+    add.push({ id: newId(), name, group: MORNING_MOTIVATION.group, linkedProblemIds: [p.id], underProblemId: p.id, doneLabel: '実施した', notDoneLabel: '実施しなかった', createdAt: now + i, updatedAt: now });
+  }
+  return add.length ? { approaches: [...approaches, ...add], changed: true } : { approaches, changed: false };
+}
+
 /** 朝要因の「出社前の活動（やる気）」（5段階・5が良い）。なければ足す（何度実行しても同じ結果） */
 export const MORNING_MOTIVATION = { name: '出社前の活動（やる気）', description: '5＝やる気満々 〜 1＝やる気が出ない', group: '朝要因' } as const;
 export function ensureMorningMotivation(problems: Problem[], newId: () => string, now: number): { problems: Problem[]; changed: boolean } {
