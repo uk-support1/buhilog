@@ -76,16 +76,34 @@ describe('出社前の活動（やる気）の下の「実施したか」', () =
     expect(as.map((x) => x.name)).toEqual([...MOTIVATION_ACTIONS]);
     expect(as.every((x) => x.underProblemId === 'pm')).toBe(true);
   });
-  it('今日の画面では、やる気の項目のすぐ下に〇ではなく「実施した／実施しなかった」で出る', async () => {
+  it('旧い版で足した項目にも、「3以下のときだけ出す」が付く', () => {
+    const p = ensureMorningMotivation([], () => 'pid', 1).problems;
+    const old = ensureMotivationActions(p, [], () => 'x' + Math.random(), 5).approaches.map((a) => { const { visibleWhenRatingAtMost: _v, ...rest } = a; return rest; });
+    const r = ensureMotivationActions(p, old as never, () => 'y', 9);
+    expect(r.changed).toBe(true);
+    expect(r.approaches.every((a) => a.visibleWhenRatingAtMost === 3)).toBe(true);
+    expect(r.approaches).toHaveLength(3);
+  });
+  it('今日の画面では、やる気が3以下のときだけ「実施した／実施しなかった」が出る。記録済みなら隠れない。入力済みの数も、出ているものだけ', async () => {
     const user = userEvent.setup();
     const repo = createRepo(new BuhiLogDB('motivation-ui'));
     const p = await repo.addProblem('出社前の活動（やる気）', undefined, '朝要因');
-    await repo.addApproach("B'zの動画をみる", [], undefined, undefined, undefined, { underProblemId: p.id, doneLabel: '実施した', notDoneLabel: '実施しなかった' });
-    render(<Today repo={repo} initialDate="2026-11-17" />);
+    const x = await repo.addApproach("B'zの動画をみる", [], undefined, undefined, undefined, { underProblemId: p.id, doneLabel: '実施した', notDoneLabel: '実施しなかった' });
+    await repo.updateApproach(x.id, { visibleWhenRatingAtMost: 3 } as never);
+    render(<Today repo={repo} initialDate="2026-11-18" />);
     await user.click(await screen.findByRole('tab', { name: /朝要因/ }));
+    const rating = await screen.findByRole('radiogroup', { name: '出社前の活動（やる気）の調子' });
+    expect(screen.queryByRole('radiogroup', { name: "B'zの動画をみる" })).toBeNull(); // 点数が未入力なら出ない
+    expect(screen.getByRole('tab', { name: /朝要因0\/1/ })).toBeInTheDocument(); // 隠れている項目は、数に入らない
+    await user.click(within(rating).getByRole('radio', { name: '4' }));
+    expect(screen.queryByRole('radiogroup', { name: "B'zの動画をみる" })).toBeNull();
+    await user.click(within(rating).getByRole('radio', { name: '3' }));
     const g = await screen.findByRole('radiogroup', { name: "B'zの動画をみる" });
+    expect(screen.getByRole('tab', { name: /朝要因1\/2/ })).toBeInTheDocument();
     await user.click(within(g).getByRole('radio', { name: '実施した' }));
+    await user.click(within(rating).getByRole('radio', { name: '5' })); // 点数が上がっても、記録した項目は隠れない
+    expect(screen.getByRole('radiogroup', { name: "B'zの動画をみる" })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /保存/ }));
-    await waitFor(async () => expect(Object.values((await repo.getEntry('2026-11-17'))?.approachStatuses ?? {})).toEqual(['done']));
+    await waitFor(async () => expect(Object.values((await repo.getEntry('2026-11-18'))?.approachStatuses ?? {})).toEqual(['done']));
   });
 });

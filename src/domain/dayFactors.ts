@@ -74,6 +74,8 @@ export function convertDayFactors(
 }
 
 /** 「出社前の活動（やる気）」のすぐ下に出す、やる気を上げる方法（実施した／実施しなかった）。朝の「上げる方法」の初期の一覧と同じ内容 */
+/** やる気の点数がこの値以下のときだけ、やる気を上げる方法を出す */
+export const MOTIVATION_LOW = 3;
 export const MOTIVATION_ACTIONS = ["B'zの動画をみる", '大学の時の動画をみる', 'シャワーを浴びる'] as const;
 export function ensureMotivationActions(problems: Problem[], approaches: Approach[], newId: () => string, now: number): { approaches: Approach[]; changed: boolean } {
   const p = problems.find((x) => x.name === MORNING_MOTIVATION.name);
@@ -81,9 +83,18 @@ export function ensureMotivationActions(problems: Problem[], approaches: Approac
   const add: Approach[] = [];
   for (const [i, name] of MOTIVATION_ACTIONS.entries()) {
     if (approaches.some((a) => a.underProblemId === p.id && a.name === name)) continue;
-    add.push({ id: newId(), name, group: MORNING_MOTIVATION.group, linkedProblemIds: [p.id], underProblemId: p.id, doneLabel: '実施した', notDoneLabel: '実施しなかった', createdAt: now + i, updatedAt: now });
+    add.push({ id: newId(), name, group: MORNING_MOTIVATION.group, linkedProblemIds: [p.id], underProblemId: p.id, visibleWhenRatingAtMost: MOTIVATION_LOW, doneLabel: '実施した', notDoneLabel: '実施しなかった', createdAt: now + i, updatedAt: now });
   }
-  return add.length ? { approaches: [...approaches, ...add], changed: true } : { approaches, changed: false };
+  // すでにある項目（旧い版で足したもの）にも、「3以下のときだけ出す」を付ける
+  let changed = add.length > 0;
+  const existing = approaches.map((a) => {
+    if (a.underProblemId === p.id && (MOTIVATION_ACTIONS as readonly string[]).includes(a.name) && a.visibleWhenRatingAtMost == null) {
+      changed = true;
+      return { ...a, visibleWhenRatingAtMost: MOTIVATION_LOW, updatedAt: now };
+    }
+    return a;
+  });
+  return changed ? { approaches: [...existing, ...add], changed: true } : { approaches, changed: false };
 }
 
 /** 朝要因の「出社前の活動（やる気）」（5段階・5が良い）。なければ足す（何度実行しても同じ結果） */

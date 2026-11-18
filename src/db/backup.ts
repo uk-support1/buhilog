@@ -89,7 +89,7 @@ function normalizeOlder(json: unknown): void {
     if (r.groupOrder) h.settings.groupOrder = r.groupOrder;
   }
   // v11: 「出社前の活動（やる気）」の下の、やる気を上げる方法
-  if (j.settings && (j.settings.schemaVersion ?? 0) < 11 && Array.isArray(j.problems)) {
+  if (j.settings && (j.settings.schemaVersion ?? 0) < 12 && Array.isArray(j.problems)) {
     const h = j as { problems: Problem[]; approaches?: Approach[] };
     h.approaches = ensureMotivationActions(h.problems, h.approaches ?? [], () => crypto.randomUUID(), Date.now()).approaches;
   }

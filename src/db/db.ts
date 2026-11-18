@@ -200,6 +200,22 @@ export class BuhiLogDB extends Dexie {
         if (r.changed) await tx.table('approaches').bulkPut(r.approaches);
         await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 11; });
       });
+    // v12: やる気を上げる方法は「やる気が3以下のときだけ」出す。ほかの記録には触れない。
+    this.version(12)
+      .stores({
+        problems: 'id, order, archivedAt',
+        approaches: 'id, archivedAt',
+        dailyEntries: 'id, &localDate',
+        settings: 'key',
+        medications: 'id, order, archivedAt',
+        events: 'id, date',
+        todos: 'id, list, order',
+      })
+      .upgrade(async (tx) => {
+        const r = ensureMotivationActions(await tx.table('problems').toArray(), await tx.table('approaches').toArray(), () => crypto.randomUUID(), Date.now());
+        if (r.changed) await tx.table('approaches').bulkPut(r.approaches);
+        await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 12; });
+      });
   }
 }
 
