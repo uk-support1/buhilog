@@ -9,7 +9,7 @@ import type { Approach, ApproachStatus, Medication, Problem } from '../domain/ty
 import { Buhio } from '../ui/Buhio';
 import { PROBLEM_SCALE_LABEL } from '../domain/scale';
 import { ScoreInput } from '../ui/ScoreInput';
-import { BOOST_NONE, BOOST_PROBLEM_NAME, BOOST_THRESHOLD, boostActionsOf, toggleBoost } from '../domain/boost';
+import { approachShown } from '../domain/approachVisibility';
 import { TimeSelect } from '../ui/TimeSelect';
 import { TodayEvents } from './TodayEvents';
 
@@ -55,7 +55,6 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
   const [approaches, setApproaches] = useState<Approach[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [groupOrder, setGroupOrder] = useState<string[]>([]);
-  const [boostList, setBoostList] = useState(boostActionsOf());
   const [form, setForm] = useState<Form>(emptyForm());
   const [existing, setExisting] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -75,7 +74,6 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
       setApproaches(as);
       setMedications(ms);
       setGroupOrder(st.groupOrder ?? []);
-      setBoostList(boostActionsOf(st.boostActions));
       setExisting(!!e);
       setForm(
         e
@@ -196,36 +194,6 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
     }
   };
 
-  // 朝の調子が低い（3以下）ときに、その場で「上げる方法」を出す。やったことと、やったあとの調子を記録する
-  const boostCard = (p: Problem) => {
-    const r = form.ratings[p.id];
-    if (!((r != null && r <= BOOST_THRESHOLD) || form.boost.actions.length > 0)) return null;
-    const visible = boostList.filter((a) => !a.archivedAt || form.boost.actions.includes(a.id));
-    return (
-      <div className="boost" role="group" aria-label="調子を上げる方法">
-        <p><strong>朝の調子が低めです。</strong>少しだけ、上げる方法を試してみませんか？</p>
-        <p className="muted small">やったものをタップしてください（いくつでも）。</p>
-        <div className="boostlist">
-          {visible.map((a) => {
-            const on = form.boost.actions.includes(a.id);
-            return (
-              <button key={a.id} type="button" role="checkbox" aria-checked={on} className={`boostbtn ${on ? 'sel' : ''}`}
-                onClick={() => edit((f) => ({ ...f, boost: { ...f.boost, actions: toggleBoost(f.boost.actions, a.id) } }))}>
-                {on ? '✓ ' : ''}{a.name}
-              </button>
-            );
-          })}
-        </div>
-        {form.boost.actions.length > 0 && (
-          <div className="boostafter">
-            <p className="small">{form.boost.actions.includes(BOOST_NONE) && form.boost.actions.length === 1 ? '何もしなかったあとの、いまの調子は？' : 'やったあとの、いまの調子は？'}（あとから入れてもOKです）</p>
-            <ScoreInput label="やったあとの調子" value={form.boost.after} onChange={(v) => edit((f) => ({ ...f, boost: { ...f.boost, after: v } }))} />
-          </div>
-        )}
-      </div>
-    );
-  };
-
   /** 困りごとの「すぐ下」に出す、〇／×の2択の項目。もう一度押すと未回答に戻る。〇のときだけメモ欄 */
   const underRow = (a: Approach) => {
     const cur = form.statuses[a.id] ?? 'unknown';
@@ -258,9 +226,8 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
         reverse={p.reverse}
         onChange={(v) => edit((f) => ({ ...f, ratings: { ...f.ratings, [p.id]: v } }))}
       />
-      {p.name === BOOST_PROBLEM_NAME && boostCard(p)}
       {approachOf(p.pairedApproachId) && practiceRow(approachOf(p.pairedApproachId)!)}
-      {approaches.filter((a) => a.underProblemId === p.id).map(underRow)}
+      {approaches.filter((a) => a.underProblemId === p.id && approachShown(a, form.ratings[p.id], form.statuses[a.id])).map(underRow)}
       {rescueChips(p)}
       {p.noteAlways ? (
         <label className="field">
@@ -535,7 +502,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
 
   const progress = (g: (typeof groups)[number]) => {
     const ps = g.sections.flatMap((s) => s.problems);
-    const as = g.sections.flatMap((s) => s.approaches);
+    const as = g.sections.flatMap((s) => s.approaches).filter((a) => approachShown(a, a.underProblemId ? form.ratings[a.underProblemId] : undefined, form.statuses[a.id]));
     let filled = ps.filter((p) => form.ratings[p.id] != null).length + as.filter((a) => (form.statuses[a.id] ?? 'unknown') !== 'unknown').length;
     let total = ps.length + as.length;
     const gm = medications.filter((m) => !m.linkedProblemId && m.group === g.name);

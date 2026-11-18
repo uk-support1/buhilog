@@ -1,5 +1,6 @@
 import type { Group } from './groups';
 import { UNGROUPED } from './groups';
+import { approachShown } from './approachVisibility';
 import type { DailyEntry, Medication } from './types';
 
 export interface GroupProgress { name: string; filled: number; total: number }
@@ -8,7 +9,7 @@ export interface GroupProgress { name: string; filled: number; total: number }
 export function groupProgress(entry: DailyEntry, groups: Group[], meds: Medication[] = []): GroupProgress[] {
   return groups.map((g) => {
     const ps = g.sections.flatMap((s) => s.problems);
-    const as = g.sections.flatMap((s) => s.approaches);
+    const as = g.sections.flatMap((s) => s.approaches).filter((a) => approachShown(a, a.underProblemId ? entry.problemRatings[a.underProblemId] : undefined, entry.approachStatuses[a.id]));
     let filled = ps.filter((p) => entry.problemRatings[p.id] != null).length
       + as.filter((a) => (entry.approachStatuses[a.id] ?? 'unknown') !== 'unknown').length;
     let total = ps.length + as.length;

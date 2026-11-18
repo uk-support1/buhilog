@@ -49,6 +49,8 @@ export const ApproachSchema = z.object({
   notDoneLabel: z.string().trim().max(MAX_NAME).optional(),
   /** 指定した困りごとの「すぐ下」に、〇／×の2択で出す項目（例: 困りごとの相手への対応を意識したか）。一覧には出さない */
   underProblemId: z.string().min(1).max(64).optional(),
+  /** 指定した困りごとの点数がこの値以下のときだけ出す（記録済みなら隠さない）。underProblemId と一緒に使う */
+  visibleWhenRatingAtMost: z.number().int().min(1).max(5).optional(),
   /** true: 「筋肉痛」も選べる（選ぶと強さを5段階で記録） */
   sore: z.boolean().optional(),
   /** 「実施した」を選んだとき、下に出すメモ欄の呼び名（例: どんな筋トレをしたか） */
@@ -189,7 +191,7 @@ export const AppSettingsSchema = z.object({
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: SCHEMA_VERSION,
   onboardingCompleted: false,
