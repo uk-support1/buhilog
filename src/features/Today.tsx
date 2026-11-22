@@ -456,6 +456,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
       )}
       <fieldset>
         <legend>中途覚醒の回数（眠ってからの時間ごと）</legend>
+        <button type="button" className={`noawake ${form.awake.every((x) => x === '0') ? 'sel' : ''}`} aria-pressed={form.awake.every((x) => x === '0')} onClick={() => edit((f) => ({ ...f, awake: Array(5).fill('0') }))}>中途覚醒なし（すべて0回）</button>
         <div className="awake-list">
           {AWAKE_LABELS.map((label, i) => (
             <label key={label} className="awake-row">
@@ -467,7 +468,6 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
             </label>
           ))}
         </div>
-        <button type="button" onClick={() => edit((f) => ({ ...f, awake: Array(5).fill('0') }))}>中途覚醒なし（すべて0回）</button>
         <p className="total" role="status">合計（1〜6時間目）： <strong>{awakeSum == null ? '未入力' : `${awakeSum}回`}</strong></p>
       </fieldset>
     </section>

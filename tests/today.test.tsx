@@ -134,4 +134,20 @@ describe('中途覚醒なしボタン', () => {
     await screen.findByText(/保存しました/);
     expect((await repo.getEntry('2026-05-08'))?.awakenings).toEqual([0, 0, 0, 0, 0]);
   });
+
+  it('ボタンは時間ごとの一覧の一番上にあり、押すと濃い色（選択中）になる', async () => {
+    const repo = createRepo(new BuhiLogDB('ui7b'));
+    await repo.addProblem('睡眠の質', undefined, '睡眠');
+    const user = userEvent.setup();
+    render(<Today repo={repo} initialDate="2026-05-09" />);
+    await screen.findByRole('tablist');
+    const btn = screen.getByRole('button', { name: /中途覚醒なし/ });
+    const firstRow = document.querySelector('.awake-list')!;
+    // ボタンは、時間ごとの一覧より前（上）にある
+    expect(btn.compareDocumentPosition(firstRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(btn).toHaveAttribute('aria-pressed', 'false');
+    await user.click(btn);
+    expect(btn).toHaveAttribute('aria-pressed', 'true');
+    expect(btn).toHaveClass('sel');
+  });
 });
