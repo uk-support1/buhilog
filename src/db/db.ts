@@ -3,7 +3,7 @@ import { legacyRatingToNew } from '../domain/scale';
 import { convertDayFactors, ensureMorningMotivation, ensureMotivationActions } from '../domain/dayFactors';
 import { ensureVitalitySigns } from '../domain/signs';
 import { applyV9 } from '../domain/v9';
-import { ensureMedications } from '../domain/medications';
+import { ensureDaevigo, ensureMedications } from '../domain/medications';
 import type { AppSettings, Approach, CalendarEvent, DailyEntry, Medication, Problem, Todo } from '../domain/types';
 
 type SettingsRow = AppSettings & { key: 'app' };
@@ -215,6 +215,22 @@ export class BuhiLogDB extends Dexie {
         const r = ensureMotivationActions(await tx.table('problems').toArray(), await tx.table('approaches').toArray(), () => crypto.randomUUID(), Date.now());
         if (r.changed) await tx.table('approaches').bulkPut(r.approaches);
         await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 12; });
+      });
+    // v13: 服薬に「デエビゴ」（たまに飲む薬。2.5mg か 5mg）を足す。ほかの記録には触れない。
+    this.version(13)
+      .stores({
+        problems: 'id, order, archivedAt',
+        approaches: 'id, archivedAt',
+        dailyEntries: 'id, &localDate',
+        settings: 'key',
+        medications: 'id, order, archivedAt',
+        events: 'id, date',
+        todos: 'id, list, order',
+      })
+      .upgrade(async (tx) => {
+        const r = ensureDaevigo(await tx.table('medications').toArray(), () => crypto.randomUUID(), Date.now());
+        if (r.changed) await tx.table('medications').add(r.medications[r.medications.length - 1]);
+        await tx.table('settings').toCollection().modify((s: { schemaVersion?: number }) => { s.schemaVersion = 13; });
       });
   }
 }
