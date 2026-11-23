@@ -82,6 +82,8 @@ export const DailyEntrySchema = z.object({
   approachSoreness: z.record(z.string(), z.number().int().min(1).max(5)).optional(),
   /** 「実施した」項目のメモ（どんな筋トレをしたか、など） */
   approachNotes: z.record(z.string(), z.string().max(MAX_TEXT)).optional(),
+  /** 服薬のメモ（服薬の枠ごと。キーは枠のグループ名: 前夜要因・朝要因 など） */
+  medNotes: z.record(z.string(), z.string().max(MAX_TEXT)).optional(),
   /** 合計睡眠時間（夜＋昼寝）。就寝・起床があれば自動計算した値を保存 */
   sleepHours: z.number().min(0).max(24).optional(),
   bedtime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),

@@ -198,3 +198,6 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 /* 「中途覚醒なし」ボタン（時間ごとの一覧の一番上。色つき。押すと濃くなる） */
 .noawake { width:100%; margin:6px 0 4px; min-height:48px; font-weight:800; background:#e3f6e8; border:2px solid #8fd3a3; color:#1f6b3a; }
 .noawake.sel { background:#3ea560; border-color:#3ea560; color:#fff; }
+/* ときどき飲む薬（「すべて飲んだ」に入らないことが分かるように、枠と印で分ける） */
+.occasional { border:2px dashed #e6b34d; background:#fff8e6; border-radius:14px; padding:8px 10px; margin:10px 0; }
+.occ-title { margin:0 0 2px; font-weight:800; } .occ-badge { display:inline-block; background:#e6b34d; color:#fff; border-radius:999px; padding:1px 8px; font-size:.75rem; margin-right:4px; }

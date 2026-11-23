@@ -26,6 +26,8 @@ interface Form {
   quantities: Record<string, string>;
   /** 調子が低い朝にやった「上げる方法」と、そのあとの調子 */
   boost: { actions: string[]; after: number | null };
+  /** 服薬のメモ（枠のグループ名 → 文字） */
+  medNotes: Record<string, string>;
   /** 筋肉痛の強さ（approachId → 1〜5） */
   soreness: Record<string, number>;
   /** 「実施した」項目のメモ（approachId → 文字） */
@@ -41,7 +43,7 @@ interface Form {
 // 就寝・起床は未入力から始める。23:00 / 7:00 は「初期値の表示」（選択画面の開始位置）で、触るまでは入力済みにしない
 const emptyForm = (): Form => ({
   ratings: {}, notes: {}, statuses: {}, sleep: '', bed: '', wake: '', nap: '',
-  awake: Array(5).fill(''), quantities: {}, soreness: {}, aNotes: {}, boost: { actions: [], after: null }, meds: {}, stress: null, noteEvents: '', noteInsights: '', noteOther: '',
+  awake: Array(5).fill(''), quantities: {}, soreness: {}, aNotes: {}, medNotes: {}, boost: { actions: [], after: null }, meds: {}, stress: null, noteEvents: '', noteInsights: '', noteOther: '',
 });
 
 const STATUS_LABEL: Record<ApproachStatus, string> = { done: '実施した', not_done: '実施しなかった', sore: '筋肉痛', unknown: '未回答' };
@@ -88,6 +90,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
               awake: Array.from({ length: 5 }, (_, i) => (e.awakenings?.[i] != null ? String(e.awakenings[i]) : '')),
               quantities: Object.fromEntries(Object.entries(e.approachQuantities ?? {}).map(([k, v]) => [k, String(v)])),
               boost: { actions: [...(e.boost?.actions ?? [])], after: e.boost?.after ?? null },
+              medNotes: { ...(e.medNotes ?? {}) },
               soreness: { ...(e.approachSoreness ?? {}) },
               aNotes: { ...(e.approachNotes ?? {}) },
               meds: Object.fromEntries(Object.entries(e.medIntake ?? {}).map(([k, v]) => [k, String(v)])),
@@ -174,6 +177,7 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
         boost: form.boost.actions.length ? { actions: form.boost.actions, ...(form.boost.after != null ? { after: form.boost.after } : {}) } : undefined,
         approachSoreness: Object.keys(soreness).length ? soreness : undefined,
         approachNotes: Object.keys(aNotes).length ? aNotes : undefined,
+        medNotes: Object.values(form.medNotes).some((v) => v.trim() !== '') ? Object.fromEntries(Object.entries(form.medNotes).filter(([, v]) => v.trim() !== '')) : undefined,
         medIntake: Object.keys(medIntake).length ? medIntake : undefined,
         sleepHours: sleepNum,
         bedtime: form.bed || undefined,
@@ -285,6 +289,10 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
   const medsCard = (groupName: string | null) => {
     const list = medications.filter((m) => !m.linkedProblemId && (groupName === null || m.group === groupName));
     if (list.length === 0) return null;
+    // 基本の量がない薬（デエビゴなど、ときどき飲む薬）は、「すべて飲んだ」に含めず、別にまとめて見せる
+    const occasional = list.filter((m) => m.kind === 'dose' && m.baseDose == null);
+    const regular = list.filter((m) => !(m.kind === 'dose' && m.baseDose == null));
+    const medKey = groupName ?? list[0].group ?? '';
     return (
       <section className="card" key={`meds-${groupName ?? 'all'}`} aria-label="服薬">
         <h2>{list[0].section ?? '服薬'}</h2>
@@ -293,15 +301,23 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
           <button
             type="button"
             className="bulk"
-            onClick={() => edit((f) => ({ ...f, meds: { ...f.meds, ...Object.fromEntries(list.filter((m) => m.kind !== 'dose' || m.baseDose != null).map((m) => [m.id, m.kind === 'dose' ? String(m.baseDose) : '1'])) } }))}
+            onClick={() => edit((f) => ({ ...f, meds: { ...f.meds, ...Object.fromEntries(regular.map((m) => [m.id, m.kind === 'dose' ? String(m.baseDose) : '1'])) } }))}
           >
             すべて飲んだ（基本の量を入れる）
           </button>
         )}
-        {list.some((m) => m.kind === 'dose' && m.baseDose == null) && (
-          <p className="muted small">「すべて飲んだ」には、基本の量がない薬（{list.filter((m) => m.kind === 'dose' && m.baseDose == null).map((m) => m.name).join('、')}）は含まれません。</p>
+        {regular.map((m) => (m.kind === 'dose' ? doseRow(m) : takenRow(m)))}
+        {occasional.length > 0 && (
+          <div className="occasional" role="group" aria-label="ときどき飲む薬">
+            <p className="occ-title"><span className="occ-badge">ボタンに含まれません</span> ときどき飲む薬</p>
+            <p className="muted small">上の「すべて飲んだ」では入りません。飲んだ日だけ、量を選んでください。</p>
+            {occasional.map(doseRow)}
+          </div>
         )}
-        {list.map((m) => (m.kind === 'dose' ? doseRow(m) : takenRow(m)))}
+        <label className="field">服薬のメモ（あれば）
+          <textarea aria-label="服薬のメモ" rows={2} maxLength={2000} value={form.medNotes[medKey] ?? ''}
+            onChange={(e) => edit((f) => ({ ...f, medNotes: { ...f.medNotes, [medKey]: e.target.value } }))} />
+        </label>
       </section>
     );
   };
