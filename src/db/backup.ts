@@ -194,6 +194,7 @@ export function buildCsv(b: Backup): string {
       const names = e.boost.actions.map((id) => boostActionsOf(b.settings.boostActions).find((a) => a.id === id)?.name ?? id).join('、');
       rows.push([e.localDate, '調子を上げる方法', names, e.boost.after ?? '', e.boost.after != null ? 'やったあとの調子(1-5)' : '']);
     }
+    for (const [g, note] of Object.entries(e.medNotes ?? {})) rows.push([e.localDate, '服薬メモ', g, '', note]);
     if (e.sleepHours != null) rows.push([e.localDate, '生活', '睡眠時間(時間)', e.sleepHours, '']);
     if (e.bedtime) rows.push([e.localDate, '睡眠', '就寝時刻', e.bedtime, '']);
     if (e.wakeTime) rows.push([e.localDate, '睡眠', '起床時刻', e.wakeTime, '']);

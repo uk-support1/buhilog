@@ -224,3 +224,45 @@ describe('デエビゴ（たまに飲む薬）', () => {
     await waitFor(async () => expect((await r2.getEntry('2026-11-23'))?.medIntake).toMatchObject({ m3: 2.5, m1: 50 }));
   });
 });
+
+describe('服薬：ときどき飲む薬の見せ方とメモ', () => {
+  async function setup(name: string) {
+    const d = new BuhiLogDB(name);
+    const repo = createRepo(d);
+    const now = Date.now();
+    await d.medications.bulkAdd([
+      { id: 'm1', name: 'セルトラリン', kind: 'dose', unit: 'mg', baseDose: 50, group: '前夜要因', section: '服薬', order: 0, createdAt: now, updatedAt: now },
+      { id: 'm2', name: 'トラゾドン', kind: 'dose', unit: 'mg', baseDose: 25, group: '前夜要因', section: '服薬', order: 1, createdAt: now, updatedAt: now },
+      { id: 'm3', name: 'デエビゴ', kind: 'dose', unit: 'mg', group: '前夜要因', section: '服薬', order: 2, createdAt: now, updatedAt: now },
+    ]);
+    await repo.addApproach('寝る前の習慣', [], undefined, '前夜要因');
+    await repo.addProblem('睡眠の質', undefined, '睡眠'); // 困りごとが1つもないと保存ボタンが使えない
+    return repo;
+  }
+  it('デエビゴは「ときどき飲む薬」の枠に分かれ、「ボタンに含まれません」と出る。通常の薬の並びには入らない', async () => {
+    const user = userEvent.setup();
+    const repo = await setup('occ1');
+    render(<Today repo={repo} initialDate="2026-11-24" />);
+    await user.click(await screen.findByRole('tab', { name: /前夜要因/ }));
+    const occ = await screen.findByRole('group', { name: 'ときどき飲む薬' });
+    expect(within(occ).getByText('ボタンに含まれません')).toBeInTheDocument();
+    expect(within(occ).getByLabelText('デエビゴの量')).toBeInTheDocument();
+    expect(within(occ).queryByLabelText('セルトラリンの量')).toBeNull();
+    await user.click(screen.getByRole('button', { name: /すべて飲んだ/ }));
+    expect((within(occ).getByLabelText('デエビゴの量') as HTMLSelectElement).value).toBe('');
+  });
+  it('服薬のメモを書いて保存でき、開き直しても残り、CSVにも出る', async () => {
+    const user = userEvent.setup();
+    const repo = await setup('occ2');
+    const { unmount } = render(<Today repo={repo} initialDate="2026-11-24" />);
+    await user.click(await screen.findByRole('tab', { name: /前夜要因/ }));
+    await user.type(await screen.findByLabelText('服薬のメモ'), '夜中に目が覚めたので5mg');
+    await user.click(screen.getByRole('button', { name: /保存/ }));
+    await waitFor(async () => expect((await repo.getEntry('2026-11-24'))?.medNotes).toEqual({ 前夜要因: '夜中に目が覚めたので5mg' }));
+    unmount();
+    render(<Today repo={repo} initialDate="2026-11-24" />);
+    await user.click(await screen.findByRole('tab', { name: /前夜要因/ }));
+    expect((await screen.findByLabelText('服薬のメモ') as HTMLTextAreaElement).value).toBe('夜中に目が覚めたので5mg');
+    expect(buildCsv(await buildBackup(repo))).toContain('"服薬メモ","前夜要因","","夜中に目が覚めたので5mg"');
+  });
+});
