@@ -293,10 +293,13 @@ export function Today({ repo, initialDate, onOpenCalendar }: { repo: Repo; initi
           <button
             type="button"
             className="bulk"
-            onClick={() => edit((f) => ({ ...f, meds: { ...f.meds, ...Object.fromEntries(list.map((m) => [m.id, m.kind === 'dose' ? String(m.baseDose ?? 0) : '1'])) } }))}
+            onClick={() => edit((f) => ({ ...f, meds: { ...f.meds, ...Object.fromEntries(list.filter((m) => m.kind !== 'dose' || m.baseDose != null).map((m) => [m.id, m.kind === 'dose' ? String(m.baseDose) : '1'])) } }))}
           >
             すべて飲んだ（基本の量を入れる）
           </button>
+        )}
+        {list.some((m) => m.kind === 'dose' && m.baseDose == null) && (
+          <p className="muted small">「すべて飲んだ」には、基本の量がない薬（{list.filter((m) => m.kind === 'dose' && m.baseDose == null).map((m) => m.name).join('、')}）は含まれません。</p>
         )}
         {list.map((m) => (m.kind === 'dose' ? doseRow(m) : takenRow(m)))}
       </section>

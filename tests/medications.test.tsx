@@ -1,6 +1,6 @@
 import { SCHEMA_VERSION } from '../src/domain/types';
 import Dexie from 'dexie';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BuhiLogDB } from '../src/db/db';
 import { createRepo } from '../src/db/repo';
@@ -75,7 +75,7 @@ describe('旧データの引き継ぎ（DB v5 → v6 / バックアップ）', (
     legacy.close();
     const repo = createRepo(new BuhiLogDB('legacy-v6'));
     const meds = await repo.listMedications();
-    expect(meds.map((m) => m.name)).toEqual(['クービビック', 'セルトラリン', 'トラゾドン', 'コンサータ', 'アセトアミノフェン', 'ロキソニン']);
+    expect(meds.map((m) => m.name)).toEqual(['クービビック', 'セルトラリン', 'トラゾドン', 'コンサータ', 'アセトアミノフェン', 'ロキソニン', 'デエビゴ']);
     const e = await repo.getEntry('2026-05-01');
     expect(e?.problemRatings).toEqual({ p1: 4 });
     expect(e?.medIntake).toEqual({ [meds.find((m) => m.name === 'セルトラリン')!.id]: 50 });
@@ -185,5 +185,42 @@ describe('履歴の数え方・分析', () => {
     await repo.saveEntry({ localDate: today, problemRatings: {}, problemNotes: {}, approachStatuses: {}, medIntake: entry.medIntake });
     render(<History repo={repo} onEdit={() => {}} />);
     expect(await screen.findByText('前夜 2/4')).toBeInTheDocument();
+  });
+});
+
+import { doseOptionsFor, ensureDaevigo } from '../src/domain/medications';
+describe('デエビゴ（たまに飲む薬）', () => {
+  it('選べる量は 0・2.5・5 だけ。ほかの薬の選択肢は変わらない', () => {
+    expect(doseOptionsFor('デエビゴ')).toEqual([0, 2.5, 5]);
+    expect(doseOptionsFor('セルトラリン')).toEqual([0, 12.5, 25, 37.5, 50]);
+  });
+  it('足す。何度実行しても1つだけ。基本の量はない', () => {
+    const a = ensureDaevigo([], () => 'd', 1);
+    expect(a.medications).toHaveLength(1);
+    expect(a.medications[0]).toMatchObject({ name: 'デエビゴ', kind: 'dose', unit: 'mg', group: '前夜要因', section: '服薬' });
+    expect(a.medications[0].baseDose).toBeUndefined();
+    expect(ensureDaevigo(a.medications, () => 'e', 2).changed).toBe(false);
+  });
+  it('「すべて飲んだ」には含まれず、量は2.5・5から選べる。選んだ量は保存される', async () => {
+    const user = userEvent.setup();
+    const d = new BuhiLogDB('daevigo-ui');
+    const r2 = createRepo(d);
+    const now = Date.now();
+    await d.medications.bulkAdd([
+      { id: 'm1', name: 'セルトラリン', kind: 'dose', unit: 'mg', baseDose: 50, group: '前夜要因', section: '服薬', order: 0, createdAt: now, updatedAt: now },
+      { id: 'm2', name: 'トラゾドン', kind: 'dose', unit: 'mg', baseDose: 25, group: '前夜要因', section: '服薬', order: 1, createdAt: now, updatedAt: now },
+      { id: 'm3', name: 'デエビゴ', kind: 'dose', unit: 'mg', group: '前夜要因', section: '服薬', order: 2, createdAt: now, updatedAt: now },
+    ]);
+    await r2.addProblem('睡眠の質', undefined, '睡眠');
+    await r2.addApproach('寝る前の習慣', [], undefined, '前夜要因');
+    render(<Today repo={r2} initialDate="2026-11-23" />);
+    await user.click(await screen.findByRole('tab', { name: /前夜要因/ }));
+    await user.click(await screen.findByRole('button', { name: /すべて飲んだ/ }));
+    expect((screen.getByLabelText('セルトラリンの量') as HTMLSelectElement).value).toBe('50');
+    expect((screen.getByLabelText('デエビゴの量') as HTMLSelectElement).value).toBe(''); // 含まれない（未入力のまま）
+    expect(within(screen.getByLabelText('デエビゴの量')).getAllByRole('option').map((o) => o.textContent)).toEqual(['未入力', '0 mg（飲まなかった）', '2.5 mg', '5 mg']);
+    await user.selectOptions(screen.getByLabelText('デエビゴの量'), '2.5');
+    await user.click(screen.getByRole('button', { name: /保存/ }));
+    await waitFor(async () => expect((await r2.getEntry('2026-11-23'))?.medIntake).toMatchObject({ m3: 2.5, m1: 50 }));
   });
 });

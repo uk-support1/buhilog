@@ -10,8 +10,10 @@ export const DOSE_UNIT = 'mg';
 /** トラゾドンは、25mg錠を 1/4・1/3・1と1/4・1と1/3 に分けて飲むことがあるため、その量も選べる（mgに直して小数2桁） */
 const EXTRA_DOSES: Record<string, number[]> = { トラゾドン: [6.25, 8.33, 31.25, 33.33] };
 const DOSE_NOTE: Record<string, string> = { '6.25': '1/4錠', '8.33': '1/3錠', '31.25': '1と1/4錠', '33.33': '1と1/3錠' };
+/** 薬ごとに選べる量が決まっているもの（デエビゴは、たまに飲む薬で、2.5mgか5mg） */
+const OWN_DOSES: Record<string, number[]> = { デエビゴ: [0, 2.5, 5] };
 export const doseOptionsFor = (name: string): number[] =>
-  [...DOSE_OPTIONS, ...(EXTRA_DOSES[name] ?? [])].sort((a, b) => a - b);
+  OWN_DOSES[name] ?? [...DOSE_OPTIONS, ...(EXTRA_DOSES[name] ?? [])].sort((a, b) => a - b);
 export const doseNote = (name: string, v: string): string => (name in EXTRA_DOSES ? DOSE_NOTE[v] ?? '' : '');
 
 interface Def {
@@ -105,4 +107,17 @@ export function ensureMedications(
 /** 服薬の項目を、記録の1行表示用（進捗）に数える */
 export function medProgress(entry: Pick<DailyEntry, 'medIntake'>, meds: Medication[]): { filled: number; total: number } {
   return { filled: meds.filter((m) => entry.medIntake?.[m.id] !== undefined).length, total: meds.length };
+}
+
+/**
+ * デエビゴ（たまに飲む薬。量は 2.5mg か 5mg）を、前夜要因の服薬に足す（何度実行しても同じ結果）。
+ * 「基本の量」はないので、「すべて飲んだ」には含まれない。過去の記録のメモは変えない。
+ */
+export function ensureDaevigo(medications: Medication[], newId: () => string, now: number): { medications: Medication[]; changed: boolean } {
+  if (medications.some((m) => m.name === 'デエビゴ')) return { medications, changed: false };
+  const m: Medication = {
+    id: newId(), name: 'デエビゴ', kind: 'dose', unit: 'mg', group: '前夜要因', section: '服薬',
+    order: medications.reduce((x, y) => Math.max(x, y.order), -1) + 1, createdAt: now, updatedAt: now,
+  };
+  return { medications: [...medications, m], changed: true };
 }

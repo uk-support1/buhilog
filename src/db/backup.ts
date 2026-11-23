@@ -5,7 +5,7 @@ import { convertLegacyRatings } from '../domain/scale';
 import { convertDayFactors, ensureMorningMotivation, ensureMotivationActions } from '../domain/dayFactors';
 import { boostActionsOf } from '../domain/boost';
 import { applyV9 } from '../domain/v9';
-import { ensureMedications } from '../domain/medications';
+import { ensureDaevigo, ensureMedications } from '../domain/medications';
 import { ensureVitalitySigns } from '../domain/signs';
 import {
   AppSettingsSchema, ApproachSchema, DailyEntrySchema, EventSchema, MedicationSchema, ProblemSchema, SCHEMA_VERSION, TodoSchema,
@@ -92,6 +92,11 @@ function normalizeOlder(json: unknown): void {
   if (j.settings && (j.settings.schemaVersion ?? 0) < 12 && Array.isArray(j.problems)) {
     const h = j as { problems: Problem[]; approaches?: Approach[] };
     h.approaches = ensureMotivationActions(h.problems, h.approaches ?? [], () => crypto.randomUUID(), Date.now()).approaches;
+  }
+  // v13: デエビゴ（服薬）
+  if (j.settings && (j.settings.schemaVersion ?? 0) < 13) {
+    const h = j as { medications?: Medication[] };
+    h.medications = ensureDaevigo(h.medications ?? [], () => crypto.randomUUID(), Date.now()).medications;
   }
   if (j.settings) j.settings.schemaVersion = SCHEMA_VERSION;
 }
