@@ -146,6 +146,16 @@ export function createRepo(d: BuhiLogDB = db) {
       });
     },
     async deleteEvent(id: string) { await d.events.delete(id); },
+    /** まとめて削除。消した予定を返す（「元に戻す」に使う） */
+    async deleteEvents(ids: string[]): Promise<CalendarEvent[]> {
+      return d.transaction('rw', d.events, async () => {
+        const found = (await d.events.bulkGet(ids)).filter((e): e is CalendarEvent => !!e);
+        await d.events.bulkDelete(found.map((e) => e.id));
+        return found;
+      });
+    },
+    /** 消した予定を、そのまま戻す */
+    async restoreEvents(list: CalendarEvent[]) { await d.events.bulkPut(list.map((e) => EventSchema.parse(e))); },
     /** 読み込んだ予定を追加する。同じ元ID(uid)の予定は、上書きして重複させない。追加・更新の件数を返す */
     async importEvents(list: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<{ added: number; updated: number }> {
       return d.transaction('rw', d.events, async () => {
