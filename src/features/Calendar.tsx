@@ -5,6 +5,7 @@ import { COLOR_HEX, COLOR_LABEL, colorOf, copyEventTo, eventsInRange, eventsOn, 
 import { EVENT_COLORS, type CalendarEvent, type Repeat } from '../domain/types';
 import { holidayName } from '../domain/holidays';
 import { parseIcs, type IcsResult } from '../domain/ics';
+import { BulkDelete } from './BulkDelete';
 import { CopyDates } from './CopyDates';
 import { WheelTime } from '../ui/WheelTime';
 
@@ -260,6 +261,7 @@ export function Calendar({ repo, initialDate, onPick }: { repo: Repo; initialDat
           </div>
         </section>
       )}
+      <BulkDelete repo={repo} events={events} onChanged={reload} />
       <section className="card" aria-label="カレンダーファイルの読み込み">
         <h3>カレンダーファイル(.ics)を読み込む</h3>
         <p className="muted">Googleカレンダーなどから書き出したファイルを、この端末の中だけで取り込みます（外部には送りません）。同じ予定を読み込み直しても、重複しません。</p>

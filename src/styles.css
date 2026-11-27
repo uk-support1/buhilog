@@ -201,3 +201,4 @@ select.ghost { color:var(--muted); opacity:.75; border-style:dashed; } .ghosthin
 /* ときどき飲む薬（「すべて飲んだ」に入らないことが分かるように、枠と印で分ける） */
 .occasional { border:2px dashed #e6b34d; background:#fff8e6; border-radius:14px; padding:8px 10px; margin:10px 0; }
 .occ-title { margin:0 0 2px; font-weight:800; } .occ-badge { display:inline-block; background:#e6b34d; color:#fff; border-radius:999px; padding:1px 8px; font-size:.75rem; margin-right:4px; }
+.bulklist { max-height:320px; overflow-y:auto; margin:8px 0; border:1px solid var(--line); border-radius:12px; padding:4px 8px; } .bulklist li { border-bottom:1px dotted var(--line); padding:2px 0; } .bulkdel summary { cursor:pointer; padding:6px 0; }
