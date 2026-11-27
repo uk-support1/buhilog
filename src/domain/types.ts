@@ -193,7 +193,7 @@ export const AppSettingsSchema = z.object({
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: SCHEMA_VERSION,
   onboardingCompleted: false,

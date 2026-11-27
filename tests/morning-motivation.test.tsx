@@ -24,7 +24,7 @@ describe('朝要因：出社前の活動（やる気）', () => {
     legacy.close();
     const repo = createRepo(new BuhiLogDB('legacy-v7'));
     const ps = await repo.listProblems(true);
-    expect(ps.map((p) => p.name)).toEqual(['頭痛', MORNING_MOTIVATION.name]);
+    expect(ps.map((p) => p.name)).toEqual(['頭痛', MORNING_MOTIVATION.name, '朝の耳鳴り']); // 朝の耳鳴りは v14 で、睡眠の質がなければ最後に足される
     expect(ps[1]).toMatchObject({ group: '朝要因', asFactor: true });
   });
 });

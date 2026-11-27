@@ -5,6 +5,7 @@ import { convertLegacyRatings } from '../domain/scale';
 import { convertDayFactors, ensureMorningMotivation, ensureMotivationActions } from '../domain/dayFactors';
 import { boostActionsOf } from '../domain/boost';
 import { applyV9 } from '../domain/v9';
+import { ensureMorningTinnitus } from '../domain/tinnitus';
 import { ensureDaevigo, ensureMedications } from '../domain/medications';
 import { ensureVitalitySigns } from '../domain/signs';
 import {
@@ -97,6 +98,10 @@ function normalizeOlder(json: unknown): void {
   if (j.settings && (j.settings.schemaVersion ?? 0) < 13) {
     const h = j as { medications?: Medication[] };
     h.medications = ensureDaevigo(h.medications ?? [], () => crypto.randomUUID(), Date.now()).medications;
+  }
+  // v14: 睡眠の「朝の耳鳴り」
+  if (j.settings && (j.settings.schemaVersion ?? 0) < 14 && Array.isArray(j.problems)) {
+    (j as { problems: Problem[] }).problems = ensureMorningTinnitus(j.problems as unknown as Problem[], () => crypto.randomUUID(), Date.now()).problems;
   }
   if (j.settings) j.settings.schemaVersion = SCHEMA_VERSION;
 }
